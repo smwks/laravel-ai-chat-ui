@@ -26,7 +26,7 @@ new class extends Component
 
     public bool $showEventDetails = false;
 
-    public function mount(Conversation $conversation): void
+    public function mount(Conversation $conversation, ?string $initialMessage = null): void
     {
         abort_unless(
             \Illuminate\Support\Facades\Gate::forUser(Auth::user())->allows('view', $conversation),
@@ -34,8 +34,6 @@ new class extends Component
         );
 
         $this->conversation = $conversation;
-
-        $initialMessage = session()->pull('ai-chat-ui.initial_message');
 
         if ($initialMessage) {
             $this->dispatchTurn($initialMessage);
@@ -202,14 +200,9 @@ new class extends Component
     @endif
 
     <div class="mx-auto flex h-screen max-w-3xl flex-col p-6">
-        <div class="mb-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
-                <span class="font-mono text-xs text-zinc-400">{{ $conversation->id }}</span>
-            </div>
-            <a href="{{ route(config('ai-chat-ui.routes.names.new', 'chat.new')) }}" class="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400">
-                New conversation
-            </a>
+        <div class="mb-4">
+            <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
+            <span class="font-mono text-xs text-zinc-400">{{ $conversation->id }}</span>
         </div>
 
         <div class="flex-1 space-y-4 overflow-y-auto" id="message-thread">
@@ -295,7 +288,7 @@ new class extends Component
             </div>
 
             @if ($this->selectedEvent)
-                @include('ai-chat-ui::pages.chat.partials.thought-details.' . match ($this->selectedEvent->event_type) {
+                @include('ai-chat-ui::components.chat.partials.thought-details.' . match ($this->selectedEvent->event_type) {
                     'llm.request' => 'llm-request',
                     'llm.response' => 'llm-response',
                     'tool.invoked' => 'tool',

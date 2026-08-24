@@ -6,7 +6,7 @@
 @endphp
 
 <div x-data="{ tab: 'structured' }" class="space-y-4 p-1">
-    @include('ai-chat-ui::pages.chat.partials.thought-details._header', ['title' => 'LLM Response', 'event' => $event])
+    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'LLM Response', 'event' => $event])
 
     <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 text-sm dark:bg-zinc-800">
         <button @click="tab = 'structured'" :class="tab === 'structured' ? 'bg-white shadow dark:bg-zinc-700' : ''" class="flex-1 rounded-md px-3 py-1">Structured</button>
@@ -29,6 +29,6 @@
     </div>
 
     <div x-show="tab === 'raw'">
-        @include('ai-chat-ui::pages.chat.partials.thought-details._raw-tab', ['payload' => $event->payload])
+        @include('ai-chat-ui::components.chat.partials.thought-details._raw-tab', ['payload' => $event->payload])
     </div>
 </div>

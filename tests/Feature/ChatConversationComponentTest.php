@@ -12,7 +12,7 @@ use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Models\ConversationTurn;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
 
-class ChatConversationPageTestUser extends Authenticatable
+class ChatConversationComponentTestUser extends Authenticatable
 {
     protected $table = 'users';
 
@@ -31,7 +31,7 @@ function makeConversationFixture(): array
         });
     }
 
-    $user = ChatConversationPageTestUser::create(['name' => 'Ada']);
+    $user = ChatConversationComponentTestUser::create(['name' => 'Ada']);
     test()->actingAs($user);
 
     $conversation = Conversation::create([
@@ -44,29 +44,41 @@ function makeConversationFixture(): array
     return [$user, $conversation];
 }
 
-it('sends the stashed initial message on mount and dispatches a job', function () {
+it('sends the given initial message on mount and dispatches a job', function () {
     [, $conversation] = makeConversationFixture();
 
     Bus::fake();
-    session()->put('ai-chat-ui.initial_message', 'Hello there');
 
-    Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversation]);
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'initialMessage' => 'Hello there',
+    ]);
 
     Bus::assertDispatched(ProcessChatMessage::class, function (ProcessChatMessage $job) {
         return $job->message === 'Hello there';
     });
 
     expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(1);
-    expect(session('ai-chat-ui.initial_message'))->toBeNull();
+});
+
+it('does not auto-send a turn when no initial message is given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    Bus::assertNotDispatched(ProcessChatMessage::class);
+    expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(0);
 });
 
 it('denies mounting a conversation you do not own', function () {
     [$owner, $conversation] = makeConversationFixture();
 
-    $stranger = ChatConversationPageTestUser::create(['name' => 'Stranger']);
+    $stranger = ChatConversationComponentTestUser::create(['name' => 'Stranger']);
     test()->actingAs($stranger);
 
-    Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
         ->assertForbidden();
 });
 
@@ -76,9 +88,9 @@ it('denies sending a message on a conversation you do not own', function () {
     // Mount as the owner (allowed to view) so we can isolate and prove
     // sendMessage()'s own authorization check, independent of the
     // mount()-time view check covered by the previous test.
-    $component = Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
 
-    $stranger = ChatConversationPageTestUser::create(['name' => 'Stranger']);
+    $stranger = ChatConversationComponentTestUser::create(['name' => 'Stranger']);
     test()->actingAs($stranger);
 
     $component->set('message', 'not mine')
@@ -103,7 +115,7 @@ it('strips raw script tags and neutralizes unsafe link schemes when rendering as
         'meta' => [],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversation])->html();
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
 
     // The page legitimately ships its own <script> tags (json-viewer, scroll helper);
     // what must NOT survive is the injected payload becoming a live, executable tag
@@ -133,7 +145,7 @@ it('groups trace events under the assistant message from the same turn', functio
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
 
     $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
     $grouped = $component->instance()->eventsByAssistantMessageId();
@@ -145,7 +157,7 @@ it('groups trace events under the assistant message from the same turn', functio
 it('does not leak a trace event belonging to another conversation via showDetails', function () {
     [, $conversationA] = makeConversationFixture();
 
-    $owner = ChatConversationPageTestUser::create(['name' => 'Other Owner']);
+    $owner = ChatConversationComponentTestUser::create(['name' => 'Other Owner']);
     $conversationB = Conversation::create([
         'id' => (string) Str::uuid7(),
         'participant_type' => $owner::class,
@@ -167,7 +179,7 @@ it('does not leak a trace event belonging to another conversation via showDetail
         'payload' => ['prompt' => 'secret prompt belonging to conversation B'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::pages.chat.conversation', ['conversation' => $conversationA])
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversationA])
         ->call('showDetails', $eventB->id);
 
     expect($component->instance()->selectedEvent())->toBeNull();
