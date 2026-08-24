@@ -36,9 +36,10 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'ai-chat-ui');
 
         // Register the "ai-chat-ui" namespace with Livewire's own component
-        // finder (separate from the Blade view namespace above) so that
-        // Route::livewire('...', 'ai-chat-ui::pages.chat.*') can resolve the
-        // single-file components registered in routes/web.php.
+        // finder (separate from the Blade view namespace above) so that a
+        // consuming app's own Route::livewire('...', 'ai-chat-ui::pages.chat.*')
+        // calls can resolve these single-file components. The package does
+        // not register any routes itself — see the README's "Routing" section.
         Livewire::addNamespace('ai-chat-ui', __DIR__.'/../resources/views');
 
         $this->publishes([
@@ -69,10 +70,6 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
             Conversation::class,
             ConversationPolicy::class
         );
-
-        if (config('ai-chat-ui.routes.enabled', true)) {
-            $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
-        }
 
         if ($this->app->runningInConsole()) {
             $this->commands([

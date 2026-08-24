@@ -28,9 +28,40 @@ php artisan vendor:publish --tag=ai-chat-ui-assets
 php artisan migrate
 ```
 
-Visit `/chat`. Out of the box, the package uses `Smwks\LaravelAiChatUi\Testbench\EchoAgent`
-— a trivial agent with no tools — so the install is runnable without any host-app agent
-code, as long as `laravel/ai`'s own provider/API key is configured.
+Then register your own routes — see "Routing" below. Out of the box, the package uses
+`Smwks\LaravelAiChatUi\Testbench\EchoAgent` — a trivial agent with no tools — so the install
+is runnable without any host-app agent code, as long as `laravel/ai`'s own provider/API key
+is configured.
+
+## Routing
+
+This package registers no routes and owns no URL structure — that's entirely up to the
+consuming app. It ships three Livewire single-file components under the `ai-chat-ui::`
+namespace; register them as full-page routes wherever and however you like:
+
+```php
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['web', 'auth'])->prefix('chat')->group(function () {
+    Route::livewire('/', 'ai-chat-ui::pages.chat.new')->name('chat.new');
+    Route::livewire('/history', 'ai-chat-ui::pages.chat.history')->name('chat.history');
+    Route::livewire('/{conversation}', 'ai-chat-ui::pages.chat.conversation')->name('chat.conversation');
+});
+```
+
+The `{conversation}` route parameter name must match `chat.conversation`'s
+`mount(Conversation $conversation)` signature for Laravel's implicit model binding to
+resolve it — standard Laravel routing, nothing package-specific.
+
+The package's own Blade views generate their internal cross-links (the "History" link on
+`chat.new`, the redirect target after starting a conversation, etc.) via
+`route(config('ai-chat-ui.routes.names.*'))`, not hardcoded route names. If you name your
+routes anything other than `chat.new` / `chat.history` / `chat.conversation`, update
+`config('ai-chat-ui.routes.names')` (published via `--tag=ai-chat-ui-config`) to match.
+
+You're also free to embed just one of these components inside a page you already own,
+rather than giving it a dedicated route — the `<livewire:ai-chat-ui::pages.chat.new />` tag
+syntax works anywhere once the package's service provider has booted.
 
 ## Using your own agent
 
