@@ -1,0 +1,41 @@
+{
+    "name": "smwks/laravel-ai-chat-ui",
+    "description": "Livewire chat UI and trace inspector for laravel/ai agents.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^12.0|^13.0",
+        "laravel/ai": "^0.11.0",
+        "livewire/livewire": "^4.1"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^11.2",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Smwks\\LaravelAiChatUi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Smwks\\LaravelAiChatUi\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Smwks\\LaravelAiChatUi\\LaravelAiChatUiServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
