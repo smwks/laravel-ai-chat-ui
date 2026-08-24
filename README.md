@@ -47,6 +47,11 @@ Livewire components under the `ai-chat-ui::components.chat` namespace:
   `Laravel\Ai\Models\Conversation` instance) and accepts an optional `initialMessage`
   prop (a string) to auto-send a first message on mount.
 
+All three components require an authenticated user — they call `Auth::user()`
+internally and will throw rather than gracefully 403 for a guest. Your own routes/pages
+must enforce authentication (e.g. `Route::middleware(['web', 'auth'])`) before embedding
+any of them.
+
 Drop them into pages your app already owns and routes:
 
 ```blade

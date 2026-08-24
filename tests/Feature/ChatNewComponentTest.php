@@ -37,10 +37,9 @@ it('renders the chat.new component', function () {
 it('creates a conversation and dispatches ai-chat-ui-conversation-started', function () {
     $user = actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new')
+    $component = Livewire::test('ai-chat-ui::components.chat.new')
         ->set('message', 'What is the weather like?')
-        ->call('sendMessage')
-        ->assertDispatched('ai-chat-ui-conversation-started', message: 'What is the weather like?');
+        ->call('sendMessage');
 
     $conversation = Conversation::first();
 
@@ -48,4 +47,10 @@ it('creates a conversation and dispatches ai-chat-ui-conversation-started', func
     expect($conversation->participant_type)->toBe($user::class);
     expect((string) $conversation->participant_id)->toBe((string) $user->id);
     expect($conversation->title)->toBe('What is the weather like?');
+
+    $component->assertDispatched(
+        'ai-chat-ui-conversation-started',
+        conversationId: $conversation->id,
+        message: 'What is the weather like?'
+    );
 });

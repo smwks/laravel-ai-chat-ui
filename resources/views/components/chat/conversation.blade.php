@@ -36,6 +36,15 @@ new class extends Component
         $this->conversation = $conversation;
 
         if ($initialMessage) {
+            abort_unless(
+                \Illuminate\Support\Facades\Gate::forUser(Auth::user())->allows('sendMessage', $conversation),
+                403
+            );
+
+            if (mb_strlen($initialMessage) > 2000) {
+                abort(422);
+            }
+
             $this->dispatchTurn($initialMessage);
 
             return;

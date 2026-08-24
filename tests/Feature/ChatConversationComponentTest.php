@@ -1,7 +1,9 @@
 <?php
 
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
@@ -10,6 +12,7 @@ use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
 use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Models\ConversationTurn;
+use Smwks\LaravelAiChatUi\Policies\ConversationPolicy;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
 
 class ChatConversationComponentTestUser extends Authenticatable
@@ -17,6 +20,23 @@ class ChatConversationComponentTestUser extends Authenticatable
     protected $table = 'users';
 
     protected $guarded = [];
+}
+
+// Real ConversationPolicy::view() just delegates to sendMessage(), so there's no way
+// to make view() allow while sendMessage() denies via ownership alone. This test-only
+// policy hardcodes that split to isolate the mount()-time initial-message path's own
+// sendMessage check from the view check that precedes it.
+class ViewOnlyConversationPolicy extends ConversationPolicy
+{
+    public function view(AuthenticatableContract $user, Conversation $conversation): bool
+    {
+        return true;
+    }
+
+    public function sendMessage(AuthenticatableContract $user, Conversation $conversation): bool
+    {
+        return false;
+    }
 }
 
 function makeConversationFixture(): array
@@ -67,6 +87,36 @@ it('does not auto-send a turn when no initial message is given', function () {
     Bus::fake();
 
     Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    Bus::assertNotDispatched(ProcessChatMessage::class);
+    expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(0);
+});
+
+it('rejects an initial message longer than 2000 characters', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'initialMessage' => str_repeat('a', 2001),
+    ])->assertStatus(422);
+
+    Bus::assertNotDispatched(ProcessChatMessage::class);
+    expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(0);
+});
+
+it('denies auto-sending an initial message when the user can view but not sendMessage', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Gate::policy(Conversation::class, ViewOnlyConversationPolicy::class);
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'initialMessage' => 'Hello there',
+    ])->assertForbidden();
 
     Bus::assertNotDispatched(ProcessChatMessage::class);
     expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(0);
