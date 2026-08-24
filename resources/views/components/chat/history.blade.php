@@ -50,15 +50,19 @@ new class extends Component
 
         return ['total_tokens' => $totalTokens, 'model' => $model];
     }
+
+    public function selectConversation(string $conversationId): void
+    {
+        $conversation = Conversation::findOrFail($conversationId);
+
+        abort_unless(Gate::forUser(Auth::user())->allows('view', $conversation), 403);
+
+        $this->dispatch('ai-chat-ui-conversation-selected', conversationId: $conversationId);
+    }
 }; ?>
 
 <div class="mx-auto max-w-4xl p-6">
-    <div class="mb-4 flex items-center justify-between">
-        <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
-        <a href="{{ route(config('ai-chat-ui.routes.names.new', 'chat.new')) }}" class="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400">
-            New conversation
-        </a>
-    </div>
+    <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
 
     <input
         wire:model.live.debounce.300ms="search"
@@ -80,12 +84,12 @@ new class extends Component
         <tbody>
             @foreach ($this->conversations as $conversation)
                 @php($stats = $this->statsFor($conversation))
-                <tr wire:key="conv-{{ $conversation->id }}" class="border-b border-zinc-100 dark:border-zinc-800">
-                    <td class="py-2">
-                        <a href="{{ route(config('ai-chat-ui.routes.names.conversation', 'chat.conversation'), $conversation) }}" class="hover:underline">
-                            {{ $conversation->title }}
-                        </a>
-                    </td>
+                <tr
+                    wire:key="conv-{{ $conversation->id }}"
+                    wire:click="selectConversation('{{ $conversation->id }}')"
+                    class="cursor-pointer border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                >
+                    <td class="py-2 hover:underline">{{ $conversation->title }}</td>
                     <td class="py-2">{{ $conversation->messages_count }}</td>
                     <td class="py-2 font-mono text-xs">{{ $stats['model'] ?? '—' }}</td>
                     <td class="py-2">{{ $stats['total_tokens'] }}</td>
