@@ -28,40 +28,79 @@ php artisan vendor:publish --tag=ai-chat-ui-assets
 php artisan migrate
 ```
 
-Then register your own routes — see "Routing" below. Out of the box, the package uses
-`Smwks\LaravelAiChatUi\Testbench\EchoAgent` — a trivial agent with no tools — so the install
-is runnable without any host-app agent code, as long as `laravel/ai`'s own provider/API key
-is configured.
+Out of the box, the package uses `Smwks\LaravelAiChatUi\Testbench\EchoAgent` — a trivial
+agent with no tools — so the install is runnable without any host-app agent code, as long
+as `laravel/ai`'s own provider/API key is configured. Then build your own pages that embed
+the three components below — see "Embedding these components."
 
-## Routing
+## Embedding these components
 
-This package registers no routes and owns no URL structure — that's entirely up to the
-consuming app. It ships three Livewire single-file components under the `ai-chat-ui::`
-namespace; register them as full-page routes wherever and however you like:
+This package registers no routes and owns no URL structure or page-level navigation —
+that's entirely the consuming app's job. It ships three embeddable, presentation-only
+Livewire components under the `ai-chat-ui::components.chat` namespace:
 
-```php
-use Illuminate\Support\Facades\Route;
+- `ai-chat-ui::components.chat.new` — a form to start a new conversation.
+- `ai-chat-ui::components.chat.history` — a searchable, paginated list of the
+  authenticated user's conversations.
+- `ai-chat-ui::components.chat.conversation` — the thread + "show thoughts" trace
+  inspector for one conversation. Requires a `conversation` prop (a
+  `Laravel\Ai\Models\Conversation` instance) and accepts an optional `initialMessage`
+  prop (a string) to auto-send a first message on mount.
 
-Route::middleware(['web', 'auth'])->prefix('chat')->group(function () {
-    Route::livewire('/', 'ai-chat-ui::pages.chat.new')->name('chat.new');
-    Route::livewire('/history', 'ai-chat-ui::pages.chat.history')->name('chat.history');
-    Route::livewire('/{conversation}', 'ai-chat-ui::pages.chat.conversation')->name('chat.conversation');
-});
+Drop them into pages your app already owns and routes:
+
+```blade
+{{-- resources/views/pages/chat/⚡new.blade.php --}}
+<livewire:ai-chat-ui::components.chat.new />
 ```
 
-The `{conversation}` route parameter name must match `chat.conversation`'s
-`mount(Conversation $conversation)` signature for Laravel's implicit model binding to
-resolve it — standard Laravel routing, nothing package-specific.
+```blade
+{{-- resources/views/pages/chat/⚡conversation.blade.php --}}
+<livewire:ai-chat-ui::components.chat.conversation
+    :conversation="$conversation"
+    :initial-message="$initialMessage"
+/>
+```
 
-The package's own Blade views generate their internal cross-links (the "History" link on
-`chat.new`, the redirect target after starting a conversation, etc.) via
-`route(config('ai-chat-ui.routes.names.*'))`, not hardcoded route names. If you name your
-routes anything other than `chat.new` / `chat.history` / `chat.conversation`, update
-`config('ai-chat-ui.routes.names')` (published via `--tag=ai-chat-ui-config`) to match.
+### Navigation events
 
-You're also free to embed just one of these components inside a page you already own,
-rather than giving it a dedicated route — the `<livewire:ai-chat-ui::pages.chat.new />` tag
-syntax works anywhere once the package's service provider has booted.
+Two of the components dispatch a Livewire browser event instead of redirecting
+themselves, since only your app knows what its own routes are named:
+
+| Event | Payload | Dispatched by |
+|---|---|---|
+| `ai-chat-ui-conversation-started` | `conversationId: string`, `message: string` | `components.chat.new`, after creating a new conversation |
+| `ai-chat-ui-conversation-selected` | `conversationId: string` | `components.chat.history`, when a row is picked |
+
+Your own page-level Livewire component listens for these (via Livewire's `#[On(...)]`
+attribute) and decides where to go:
+
+```php
+use Livewire\Attributes\On;
+use Livewire\Component;
+
+new class extends Component
+{
+    #[On('ai-chat-ui-conversation-started')]
+    public function onConversationStarted(string $conversationId, string $message): void
+    {
+        session()->flash('chat.initial_message', $message);
+
+        $this->redirect(route('chat.conversation', $conversationId), navigate: true);
+    }
+}; ?>
+```
+
+Your `chat.conversation` page then reads that stashed message back out of the session and
+passes it through as the `initialMessage` prop:
+
+```php
+public function mount(\Laravel\Ai\Models\Conversation $conversation): void
+{
+    $this->conversation = $conversation;
+    $this->initialMessage = session()->pull('chat.initial_message');
+}
+```
 
 ## Using your own agent
 
@@ -95,7 +134,7 @@ reasoning.
 ## Extension points
 
 - Publish views (`--tag=ai-chat-ui-views`) and override
-  `pages/chat/partials/thought-details/generic.blade.php` to render domain-specific
+  `components/chat/partials/thought-details/generic.blade.php` to render domain-specific
   structured-output payloads.
 - Out of scope in this release: entity typeahead, Markdown export, an SSE/JSON API,
   human tool-approval UI, broadcasting, and per-conversation rating/notes.

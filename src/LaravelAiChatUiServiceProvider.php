@@ -37,9 +37,10 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
 
         // Register the "ai-chat-ui" namespace with Livewire's own component
         // finder (separate from the Blade view namespace above) so that a
-        // consuming app's own Route::livewire('...', 'ai-chat-ui::pages.chat.*')
-        // calls can resolve these single-file components. The package does
-        // not register any routes itself — see the README's "Routing" section.
+        // consuming app's own <livewire:ai-chat-ui::components.chat.*> tags
+        // (or a direct Route::livewire() call, if preferred) can resolve
+        // these components. The package registers no routes of its own —
+        // see the README's "Embedding these components" section.
         Livewire::addNamespace('ai-chat-ui', __DIR__.'/../resources/views');
 
         $this->publishes([
