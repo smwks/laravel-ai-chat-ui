@@ -5,14 +5,14 @@ use Illuminate\Support\Facades\Schema;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
 
-class ChatNewPageTestUser extends Authenticatable
+class ChatNewComponentTestUser extends Authenticatable
 {
     protected $table = 'users';
 
     protected $guarded = [];
 }
 
-function actingAsChatUser(): ChatNewPageTestUser
+function actingAsChatUser(): ChatNewComponentTestUser
 {
     Schema::create('users', function ($table) {
         $table->id();
@@ -22,25 +22,25 @@ function actingAsChatUser(): ChatNewPageTestUser
         $table->timestamps();
     });
 
-    $user = ChatNewPageTestUser::create(['name' => 'Ada']);
+    $user = ChatNewComponentTestUser::create(['name' => 'Ada']);
     test()->actingAs($user);
 
     return $user;
 }
 
-it('renders the chat.new page', function () {
+it('renders the chat.new component', function () {
     actingAsChatUser();
 
-    $this->get('/chat')->assertSeeLivewire('ai-chat-ui::pages.chat.new');
+    Livewire::test('ai-chat-ui::components.chat.new')->assertOk();
 });
 
-it('creates a conversation and redirects to it, stashing the first message', function () {
+it('creates a conversation and dispatches ai-chat-ui-conversation-started', function () {
     $user = actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::pages.chat.new')
+    Livewire::test('ai-chat-ui::components.chat.new')
         ->set('message', 'What is the weather like?')
         ->call('sendMessage')
-        ->assertRedirect();
+        ->assertDispatched('ai-chat-ui-conversation-started', message: 'What is the weather like?');
 
     $conversation = Conversation::first();
 
@@ -48,5 +48,4 @@ it('creates a conversation and redirects to it, stashing the first message', fun
     expect($conversation->participant_type)->toBe($user::class);
     expect((string) $conversation->participant_id)->toBe((string) $user->id);
     expect($conversation->title)->toBe('What is the weather like?');
-    expect(session('ai-chat-ui.initial_message'))->toBe('What is the weather like?');
 });

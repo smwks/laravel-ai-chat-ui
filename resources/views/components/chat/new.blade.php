@@ -22,20 +22,12 @@ new class extends Component
             'title' => Str::limit($this->message, 60, ''),
         ]);
 
-        session()->put('ai-chat-ui.initial_message', $this->message);
-
-        $this->redirect(route(config('ai-chat-ui.routes.names.conversation', 'chat.conversation'), $conversation), navigate: true);
+        $this->dispatch('ai-chat-ui-conversation-started', conversationId: $conversation->id, message: $this->message);
     }
 }; ?>
 
 <div class="mx-auto flex h-screen max-w-2xl flex-col justify-center gap-6 p-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">New conversation</h1>
-        <a href="{{ route(config('ai-chat-ui.routes.names.history', 'chat.history')) }}"
-           class="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
-            History
-        </a>
-    </div>
+    <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">New conversation</h1>
 
     <form wire:submit="sendMessage" class="flex flex-col gap-3">
         <textarea
