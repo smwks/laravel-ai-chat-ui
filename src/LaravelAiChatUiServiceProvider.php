@@ -83,6 +83,13 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
     {
         $sensitiveHeaders = ['authorization', 'x-api-key', 'cookie', 'set-cookie'];
 
+        // Request and response are captured as one "http.exchange" event, written
+        // only once the response arrives. The request side is stashed in Context
+        // between the two middleware calls rather than persisted on its own — this
+        // assumes calls made through Http:: happen one at a time (true for every
+        // caller in this package today: the provider's own client and a tool's
+        // handle()); a concurrent caller (e.g. Http::pool()) would need its own
+        // correlation id instead of this shared Context key.
         Http::globalRequestMiddleware(function ($request) use ($sensitiveHeaders) {
             if (! Context::has('ai-chat-ui.conversation_id')) {
                 return $request;
@@ -93,23 +100,23 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
                 array_flip($sensitiveHeaders)
             );
 
-            ConversationEvent::create([
-                'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
-                'turn_id' => Context::get('ai-chat-ui.turn_id'),
-                'event_type' => 'http.request',
-                'payload' => [
-                    'method' => $request->getMethod(),
-                    'url' => (string) $request->getUri(),
-                    'headers' => $headers,
-                    'body' => json_decode((string) $request->getBody(), true),
-                ],
+            Context::add('ai-chat-ui.pending_http_request', [
+                'started_at' => hrtime(true),
+                'method' => $request->getMethod(),
+                'url' => (string) $request->getUri(),
+                'headers' => $headers,
+                'body' => json_decode((string) $request->getBody(), true),
             ]);
 
             return $request;
         });
 
         Http::globalResponseMiddleware(function ($response) use ($sensitiveHeaders) {
-            if (! Context::has('ai-chat-ui.conversation_id')) {
+            $pending = Context::get('ai-chat-ui.pending_http_request');
+
+            Context::forget('ai-chat-ui.pending_http_request');
+
+            if (! Context::has('ai-chat-ui.conversation_id') || ! $pending) {
                 return $response;
             }
 
@@ -121,11 +128,21 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
             ConversationEvent::create([
                 'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
                 'turn_id' => Context::get('ai-chat-ui.turn_id'),
-                'event_type' => 'http.response',
+                'event_type' => 'http.exchange',
                 'payload' => [
+                    'source' => Context::get('ai-chat-ui.tool_source', 'provider'),
+                    'method' => $pending['method'],
+                    'url' => $pending['url'],
                     'status' => $response->getStatusCode(),
-                    'headers' => $headers,
-                    'body' => json_decode((string) $response->getBody(), true),
+                    'duration_ms' => (hrtime(true) - $pending['started_at']) / 1_000_000,
+                    'request' => [
+                        'headers' => $pending['headers'],
+                        'body' => $pending['body'],
+                    ],
+                    'response' => [
+                        'headers' => $headers,
+                        'body' => json_decode((string) $response->getBody(), true),
+                    ],
                 ],
             ]);
 

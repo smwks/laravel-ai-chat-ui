@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Context;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiChatUi\Testbench\EchoStatusToolAgent;
 use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
 
 it('does nothing when context has no conversation id', function () {
@@ -54,4 +55,53 @@ it('captures tool.invoked with sql queries made during the tool call', function 
     expect($toolEvent)->not->toBeNull();
     expect($toolEvent->payload['tool'])->toBe('NoopTool');
     expect($toolEvent->payload)->toHaveKeys(['parameters', 'result', 'duration_ms', 'sql_queries']);
+});
+
+it('captures tool.invoking with a description-based status when the tool has no custom status message', function () {
+    EchoToolAgent::fake([
+        new ToolCall('call-1', 'NoopTool', ['value' => 'x']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-invoking');
+
+    (new EchoToolAgent)->prompt('use the tool');
+
+    $invoking = ConversationEvent::where('event_type', 'tool.invoking')->first();
+
+    expect($invoking)->not->toBeNull();
+    expect($invoking->payload['tool'])->toBe('NoopTool');
+    expect($invoking->payload['status'])->toBe('A no-op tool used only in package tests.');
+    expect($invoking->payload)->toHaveKey('tool_invocation_id');
+});
+
+it('captures tool.invoking with a custom status message when the tool implements HasStatusMessage', function () {
+    EchoStatusToolAgent::fake([
+        new ToolCall('call-1', 'StatusMessageTool', ['value' => 'NYC']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-status');
+
+    (new EchoStatusToolAgent)->prompt('use the tool');
+
+    $invoking = ConversationEvent::where('event_type', 'tool.invoking')->first();
+
+    expect($invoking->payload['status'])->toBe('Looking up NYC…');
+});
+
+it('correlates tool.invoking and tool.invoked via the same tool_invocation_id', function () {
+    EchoToolAgent::fake([
+        new ToolCall('call-1', 'NoopTool', ['value' => 'x']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-correlate');
+
+    (new EchoToolAgent)->prompt('use the tool');
+
+    $invoking = ConversationEvent::where('event_type', 'tool.invoking')->first();
+    $invoked = ConversationEvent::where('event_type', 'tool.invoked')->first();
+
+    expect($invoking->payload['tool_invocation_id'])->toBe($invoked->payload['tool_invocation_id']);
 });

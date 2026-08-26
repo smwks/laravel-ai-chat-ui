@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Responses\Data\ToolCall;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
+use Smwks\LaravelAiChatUi\Testbench\EchoHttpToolAgent;
 
-it('captures request and response events only while context holds a conversation id', function () {
+it('captures one http.exchange event only while context holds a conversation id', function () {
     Http::fake(['https://example.com/*' => Http::response(['ok' => true], 200, ['X-Test' => 'yes'])]);
 
     // No context set — nothing should be captured.
@@ -17,17 +19,53 @@ it('captures request and response events only while context holds a conversation
 
     Http::withHeaders(['Authorization' => 'Bearer secret'])->get('https://example.com/with-context');
 
-    $events = ConversationEvent::orderBy('event_type')->get();
+    $events = ConversationEvent::where('event_type', 'http.exchange')->get();
 
-    expect($events)->toHaveCount(2);
+    expect($events)->toHaveCount(1);
 
-    $request = $events->firstWhere('event_type', 'http.request');
-    expect($request->conversation_id)->toBe('conv-123');
-    expect($request->turn_id)->toBe('turn-456');
-    expect($request->payload['method'])->toBe('GET');
-    expect($request->payload['headers'])->not->toHaveKey('authorization');
+    $exchange = $events->first();
+    expect($exchange->conversation_id)->toBe('conv-123');
+    expect($exchange->turn_id)->toBe('turn-456');
+    expect($exchange->payload['method'])->toBe('GET');
+    expect($exchange->payload['source'])->toBe('provider');
+    expect($exchange->payload['status'])->toBe(200);
+    expect($exchange->payload['duration_ms'])->toBeFloat();
+    expect($exchange->payload['request']['headers'])->not->toHaveKey('authorization');
+    expect($exchange->payload['response']['body'])->toBe(['ok' => true]);
+});
 
-    $response = $events->firstWhere('event_type', 'http.response');
-    expect($response->payload['status'])->toBe(200);
-    expect($response->payload['body'])->toBe(['ok' => true]);
+it('tags an http exchange made from inside a tool with that tool as its source', function () {
+    Http::fake(['https://example.com/*' => Http::response('tool response body', 200)]);
+
+    EchoHttpToolAgent::fake([
+        new ToolCall('call-1', 'HttpCallingTool', ['value' => 'x']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http');
+
+    (new EchoHttpToolAgent)->prompt('use the tool');
+
+    $exchange = ConversationEvent::where('event_type', 'http.exchange')->first();
+
+    expect($exchange->payload['source'])->toBe('HttpCallingTool');
+});
+
+it('does not leak a tool source onto an http exchange made after the tool call finishes', function () {
+    Http::fake(['https://example.com/*' => Http::response('tool response body', 200)]);
+
+    EchoHttpToolAgent::fake([
+        new ToolCall('call-1', 'HttpCallingTool', ['value' => 'x']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http-cleanup');
+
+    (new EchoHttpToolAgent)->prompt('use the tool');
+
+    Http::withHeaders([])->get('https://example.com/after-tool-call');
+
+    $exchanges = ConversationEvent::where('event_type', 'http.exchange')->orderBy('created_at')->get();
+
+    expect($exchanges->last()->payload['source'])->toBe('provider');
 });

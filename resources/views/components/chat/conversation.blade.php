@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Attributes\Computed;
@@ -10,8 +11,7 @@ use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Models\ConversationTurn;
 
-new class extends Component
-{
+new class extends Component {
     public Conversation $conversation;
 
     public string $message = '';
@@ -29,7 +29,7 @@ new class extends Component
     public function mount(Conversation $conversation, ?string $initialMessage = null): void
     {
         abort_unless(
-            \Illuminate\Support\Facades\Gate::forUser(Auth::user())->allows('view', $conversation),
+            Gate::forUser(Auth::user())->allows('view', $conversation),
             403
         );
 
@@ -37,7 +37,7 @@ new class extends Component
 
         if ($initialMessage) {
             abort_unless(
-                \Illuminate\Support\Facades\Gate::forUser(Auth::user())->allows('sendMessage', $conversation),
+                Gate::forUser(Auth::user())->allows('sendMessage', $conversation),
                 403
             );
 
@@ -68,7 +68,7 @@ new class extends Component
         }
 
         abort_unless(
-            \Illuminate\Support\Facades\Gate::forUser(Auth::user())->allows('sendMessage', $this->conversation),
+            Gate::forUser(Auth::user())->allows('sendMessage', $this->conversation),
             403
         );
 
@@ -98,13 +98,13 @@ new class extends Component
 
     public function checkTurnStatus(): void
     {
-        if (! $this->pendingTurnId) {
+        if (!$this->pendingTurnId) {
             return;
         }
 
         $turn = ConversationTurn::find($this->pendingTurnId);
 
-        if (! $turn || in_array($turn->status, [ConversationTurnStatus::Complete, ConversationTurnStatus::Failed], true)) {
+        if (!$turn || in_array($turn->status, [ConversationTurnStatus::Complete, ConversationTurnStatus::Failed], true)) {
             $this->streaming = false;
             $this->pendingUserMessage = '';
             $this->pendingTurnId = null;
@@ -139,6 +139,7 @@ new class extends Component
         $assistantMessages = $this->messages->where('role', 'assistant')->values();
 
         $eventsByTurn = ConversationEvent::where('conversation_id', $this->conversation->id)
+            ->where('event_type', '!=', 'tool.invoking')
             ->orderBy('created_at')
             ->get()
             ->groupBy('turn_id');
@@ -159,13 +160,42 @@ new class extends Component
     #[Computed]
     public function streamingEvents(): \Illuminate\Support\Collection
     {
-        if (! $this->pendingTurnId) {
+        if (!$this->pendingTurnId) {
             return collect();
         }
 
         return ConversationEvent::where('turn_id', $this->pendingTurnId)
             ->orderBy('created_at')
             ->get();
+    }
+
+    /**
+     * The in-progress turn's trace events, minus tool.invoking — that event only
+     * exists to feed currentStatus() above while a tool is running; once it lands,
+     * the same call's tool.invoked entry carries the full, permanent record.
+     */
+    public function visibleStreamingEvents(): \Illuminate\Support\Collection
+    {
+        return $this->streamingEvents->where('event_type', '!=', 'tool.invoking');
+    }
+
+    #[Computed]
+    public function currentStatus(): string
+    {
+        $default = 'Thinking…';
+
+        $invokedIds = $this->streamingEvents
+            ->where('event_type', 'tool.invoked')
+            ->map(fn (ConversationEvent $event) => $event->payload['tool_invocation_id'] ?? null)
+            ->filter()
+            ->all();
+
+        $pending = $this->streamingEvents
+            ->where('event_type', 'tool.invoking')
+            ->reverse()
+            ->first(fn (ConversationEvent $event) => ! in_array($event->payload['tool_invocation_id'] ?? null, $invokedIds, true));
+
+        return $pending?->payload['status'] ?? $default;
     }
 
     #[Computed]
@@ -182,11 +212,27 @@ new class extends Component
             'llm.request' => 'LLM Request',
             'llm.response' => 'LLM Response',
             'tool.invoked' => 'Tool',
-            'http.request' => 'HTTP →',
-            'http.response' => 'HTTP ←',
+            'http.exchange' => 'HTTP',
             'error' => 'Error',
             default => $eventType,
         };
+    }
+
+    public function detailView(ConversationEvent $event): string
+    {
+        if ($event->event_type === 'tool.invoked') {
+            $tool = $event->payload['tool'] ?? null;
+            $view = $tool ? config("ai-chat-ui.tool_views.{$tool}") : null;
+
+            return $view ?? 'ai-chat-ui::components.chat.partials.thought-details.tool';
+        }
+
+        return 'ai-chat-ui::components.chat.partials.thought-details.' . match ($event->event_type) {
+                'llm.request' => 'llm-request',
+                'llm.response' => 'llm-response',
+                'http.exchange' => 'http-exchange',
+                default => 'generic',
+            };
     }
 
     public function eventColorClasses(string $eventType): string
@@ -195,11 +241,36 @@ new class extends Component
             'llm.request' => 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20',
             'llm.response' => 'border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/20',
             'tool.invoked' => 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20',
-            'http.request' => 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20',
-            'http.response' => 'border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/20',
+            'http.exchange' => 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20',
             'error' => 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20',
             default => 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40',
         };
+    }
+
+    /**
+     * How far to indent this event in the trace list, reflecting that
+     * llm.request/llm.response bracket one whole prompt() call (which may
+     * involve several provider round-trips and tool calls), and that an
+     * http.exchange made from inside a tool's own handle() is a child of
+     * that tool call rather than a sibling provider step.
+     */
+    public function eventIndentClass(ConversationEvent $event): string
+    {
+        if (in_array($event->event_type, ['llm.request', 'llm.response'], true)) {
+            return '';
+        }
+
+        if ($event->event_type === 'http.exchange') {
+            $source = $event->payload['source'] ?? 'provider';
+
+            return $source === 'provider' ? 'ml-6' : 'ml-12';
+        }
+
+        if ($event->event_type === 'tool.invoked') {
+            return 'ml-6';
+        }
+
+        return '';
     }
 }; ?>
 
@@ -218,7 +289,8 @@ new class extends Component
             @foreach ($this->messages as $msg)
                 <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2">
                     @if ($msg->role === 'user')
-                        <div class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
+                        <div
+                            class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
                             {{ $msg->content }}
                         </div>
                     @else
@@ -226,15 +298,19 @@ new class extends Component
 
                         @if ($turnEvents->isNotEmpty())
                             <div x-data="{ open: false }" class="max-w-md">
-                                <button type="button" @click="open = !open" class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                <button type="button" @click="open = !open"
+                                        class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                     <span x-text="open ? '▾ hide thoughts' : '▸ show thoughts'"></span>
                                 </button>
                                 <div x-show="open" x-cloak class="mt-2 space-y-2">
                                     @foreach ($turnEvents as $event)
-                                        <div wire:key="event-{{ $event->id }}" class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }}">
+                                        <div wire:key="event-{{ $event->id }}"
+                                             class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
                                             <div class="flex items-center justify-between">
-                                                <span class="font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
-                                                <button type="button" wire:click="showDetails('{{ $event->id }}')" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                                <span
+                                                    class="font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                                <button type="button" wire:click="showDetails('{{ $event->id }}')"
+                                                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                                     details
                                                 </button>
                                             </div>
@@ -252,21 +328,33 @@ new class extends Component
             @endforeach
 
             @if ($pendingUserMessage)
-                <div class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white opacity-60 dark:bg-zinc-100 dark:text-zinc-900">
+                <div
+                    class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white opacity-60 dark:bg-zinc-100 dark:text-zinc-900">
                     {{ $pendingUserMessage }}
                 </div>
             @endif
 
             @if ($streaming)
-                <div class="max-w-md space-y-2">
-                    <div class="flex items-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-500 dark:border-zinc-700">
-                        <span class="animate-pulse">Thinking…</span>
+                <div x-data="{ open: false }" class="max-w-md">
+                    <button type="button" @click="open = !open"
+                            class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                        <span x-show="!open" class="animate-pulse">▸ {{ $this->currentStatus }}</span>
+                        <span x-show="open" x-cloak>▾ hide thoughts</span>
+                    </button>
+                    <div x-show="open" x-cloak class="mt-2 space-y-2">
+                        @foreach ($this->visibleStreamingEvents() as $event)
+                            <div wire:key="stream-event-{{ $event->id }}"
+                                 class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                    <button type="button" wire:click="showDetails('{{ $event->id }}')"
+                                            class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                        details
+                                    </button>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                    @foreach ($this->streamingEvents as $event)
-                        <div wire:key="stream-event-{{ $event->id }}" class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }}">
-                            {{ $this->eventLabel($event->event_type) }}
-                        </div>
-                    @endforeach
                 </div>
             @endif
         </div>
@@ -279,7 +367,8 @@ new class extends Component
                 @disabled($streaming)
                 class="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             >
-            <button type="submit" @disabled($streaming) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
+            <button type="submit"
+                    @disabled($streaming) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
                 Send
             </button>
         </form>
@@ -288,21 +377,29 @@ new class extends Component
     <div
         x-show="$wire.showEventDetails"
         x-cloak
+        x-transition.opacity.duration.200ms
         class="fixed inset-0 z-50 flex justify-end bg-black/30"
         @keydown.escape.window="$wire.closeDetails()"
     >
-        <div @click.outside="$wire.closeDetails()" class="h-full w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div
+            x-show="$wire.showEventDetails"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="translate-x-full"
+            x-transition:enter-end="translate-x-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="translate-x-0"
+            x-transition:leave-end="translate-x-full"
+            @click.outside="$wire.closeDetails()"
+            class="h-full w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-xl dark:bg-zinc-900"
+        >
             <div class="mb-4 flex justify-end">
-                <button type="button" wire:click="closeDetails" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">close ✕</button>
+                <button type="button" wire:click="closeDetails"
+                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">close ✕
+                </button>
             </div>
 
             @if ($this->selectedEvent)
-                @include('ai-chat-ui::components.chat.partials.thought-details.' . match ($this->selectedEvent->event_type) {
-                    'llm.request' => 'llm-request',
-                    'llm.response' => 'llm-response',
-                    'tool.invoked' => 'tool',
-                    default => 'generic',
-                }, ['event' => $this->selectedEvent])
+                @include($this->detailView($this->selectedEvent), ['event' => $this->selectedEvent])
             @endif
         </div>
     </div>
@@ -311,10 +408,12 @@ new class extends Component
     <script>
         document.addEventListener('livewire:navigated', () => scrollAiChatUiThreadToBottom());
         document.addEventListener('livewire:update', () => scrollAiChatUiThreadToBottom());
+
         function scrollAiChatUiThreadToBottom() {
             const thread = document.getElementById('message-thread');
             if (thread) thread.scrollTop = thread.scrollHeight;
         }
+
         scrollAiChatUiThreadToBottom();
     </script>
 </div>
