@@ -5,6 +5,14 @@ conversation, a searchable history list, and a thread view with a "show thoughts
 that replays every LLM request/response, tool invocation, and raw HTTP exchange behind
 each assistant reply.
 
+## Requirements
+
+- PHP ^8.3
+- Laravel ^12.0 or ^13.0
+- Livewire ^4.1
+- [`laravel/ai`](https://github.com/laravel/ai) ^0.11.0 — still pre-1.0, so its own API
+  may change between releases; pin it deliberately in your own `composer.json`.
+
 ## Prerequisite
 
 This package does not store conversations or messages itself — it builds entirely on
@@ -129,17 +137,66 @@ class SupportAgent implements Agent, Conversational
 
 ## Trace correlation — important if you extend this package
 
-Which conversation/turn is "in flight" is tracked via Laravel's `Context` facade
-(`ai-chat-ui.conversation_id` / `ai-chat-ui.turn_id`), set once at the top of
-`ProcessChatMessage::handle()`. It is **not** stored on the agent object, and the agent
-binding is **not** a singleton. If you add code that captures more trace data, read these
-`Context` keys rather than reaching for agent identity — see the design spec for the full
-reasoning.
+Which conversation/turn is "in flight" is tracked via Laravel's `Context` facade, not
+stored on the agent object — the agent binding is **not** a singleton. If you add code
+that captures more trace data, read these `Context` keys rather than reaching for agent
+identity:
+
+| Key | Set by | Meaning |
+|---|---|---|
+| `ai-chat-ui.conversation_id` / `ai-chat-ui.turn_id` | `ProcessChatMessage::handle()`, once at the top | Which conversation/turn is in flight. Every capture listener below is a no-op unless `conversation_id` is present. |
+| `ai-chat-ui.tool_source` | `CaptureToolInvoking`, for the duration of that tool's `handle()` call | Attributes any HTTP call captured during that window to the tool rather than to the LLM provider — see `payload['source']` on an `http.exchange` event. |
+| `ai-chat-ui.pending_http_request` | The request-side HTTP middleware, cleared by the response-side middleware | Correlates a request with its response into one `http.exchange` event. Assumes calls through `Http::` happen one at a time; a concurrent caller (e.g. `Http::pool()`) would need its own correlation id instead. |
 
 ## Extension points
 
 - Publish views (`--tag=ai-chat-ui-views`) and override
   `components/chat/partials/thought-details/generic.blade.php` to render domain-specific
   structured-output payloads.
+- Give a specific tool its own "show thoughts" detail view via `config('ai-chat-ui.tool_views')`,
+  keyed by the tool name found in a `tool.invoked` event's `payload['tool']`:
+
+  ```php
+  // config/ai-chat-ui.php
+  'tool_views' => [
+      'weather' => 'chat.tools.weather-details',
+  ],
+  ```
+
+  The view receives an `event` prop (a `ConversationEvent`). Tools not listed here keep
+  rendering through the package's own generic tool partial — no need to publish or fork
+  anything just to add one tool's view.
+- Give a tool's own "thinking" status message by implementing
+  `Smwks\LaravelAiChatUi\Contracts\HasStatusMessage`:
+
+  ```php
+  use Smwks\LaravelAiChatUi\Contracts\HasStatusMessage;
+
+  class WeatherTool implements Tool, HasStatusMessage
+  {
+      public function statusMessage(array $arguments): string
+      {
+          return "Checking the weather in {$arguments['city']}…";
+      }
+
+      // ...description(), handle(), schema()
+  }
+  ```
+
+  While that tool is running, the chat UI's "thinking" indicator shows this string
+  instead of a generic "Thinking…" — the collapsed toggle it lives in also expands, on
+  click, into the same live trace boxes the completed view shows. A tool that doesn't
+  implement this interface falls back to its own `description()`.
 - Out of scope in this release: entity typeahead, Markdown export, an SSE/JSON API,
   human tool-approval UI, broadcasting, and per-conversation rating/notes.
+
+## Testing
+
+```bash
+composer install
+vendor/bin/pest
+```
+
+## License
+
+MIT — see [LICENSE.md](LICENSE.md).
