@@ -41,6 +41,14 @@ class ViewOnlyConversationPolicy extends ConversationPolicy
     }
 }
 
+class NoThoughtsConversationPolicy extends ConversationPolicy
+{
+    public function viewThoughts(AuthenticatableContract $user, Conversation $conversation): bool
+    {
+        return false;
+    }
+}
+
 function makeConversationFixture(): array
 {
     if (! Schema::hasTable('users')) {
@@ -653,4 +661,147 @@ it('still uses the built-in tool partial for a different tool not covered by the
 
     expect($html)->toContain('Tool: send_email');
     expect($html)->not->toContain('CUSTOM WEATHER VIEW');
+});
+
+it('shows the show-thoughts disclosure by default for a completed turn', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee('show thoughts');
+});
+
+it('hides the show-thoughts disclosure when the showThoughts prop is false', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showThoughts' => false,
+    ])->assertDontSee('show thoughts');
+});
+
+it('hides the show-thoughts disclosure when the viewThoughts policy denies it, even with the prop true', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    Gate::policy(Conversation::class, NoThoughtsConversationPolicy::class);
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showThoughts' => true,
+    ])->assertDontSee('show thoughts');
+});
+
+it('forbids showDetails() when thoughts are not allowed, not just hiding the button', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Complete,
+    ]);
+
+    $event = ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showThoughts' => false,
+    ])->call('showDetails', $event->id)->assertForbidden();
+});
+
+it('shows the conversation id and click-to-copy affordance by default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee($conversation->id);
+});
+
+it('hides the conversation id when the showIds prop is false', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showIds' => false,
+    ])->assertDontSee($conversation->id);
+});
+
+it('hides an event id in the detail panel when the showIds prop is false', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Complete,
+    ]);
+
+    $event = ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showIds' => false,
+    ])->call('showDetails', $event->id)->assertDontSee($event->id);
 });

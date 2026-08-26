@@ -1,4 +1,4 @@
-@props(['event'])
+@props(['event', 'showIds' => true])
 
 @php
     $duration = $event->payload['duration_ms'] ?? null;
@@ -6,7 +6,7 @@
 @endphp
 
 <div x-data="{ side: 'request' }" class="space-y-4 p-1">
-    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'HTTP Exchange', 'event' => $event])
+    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'HTTP Exchange', 'event' => $event, 'showIds' => $showIds])
 
     <div class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 text-sm">
         <span class="text-zinc-400">Method</span>

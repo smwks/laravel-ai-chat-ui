@@ -40,7 +40,7 @@ class QueryTracker
         // This is why QueryTracker must be a singleton — a second instance would not receive
         // events, since its registerListener() call would see self::$listenerRegistered already true
         // and skip registering its own closure.
-        if ($this->tracking) {
+        if ($this->tracking && ! $this->isOwnLoggingQuery($event->sql)) {
             $this->queries[] = [
                 'sql' => $event->sql,
                 'bindings' => $event->bindings,
@@ -48,6 +48,22 @@ class QueryTracker
                 'connection' => $event->connectionName,
             ];
         }
+    }
+
+    /**
+     * A tool's own SQL trace shouldn't include this package's own writes to its
+     * event/turn logging tables — those are an implementation detail of capturing
+     * the trace, not something the tool itself did.
+     */
+    protected function isOwnLoggingQuery(string $sql): bool
+    {
+        foreach ([config('ai-chat-ui.tables.events'), config('ai-chat-ui.tables.turns')] as $table) {
+            if ($table && str_contains($sql, $table)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function startTracking(): void

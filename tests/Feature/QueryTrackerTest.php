@@ -25,3 +25,16 @@ it('only records queries executed between startTracking and stopTracking', funct
 
     expect($tracker->stopTracking())->toBe([]);
 });
+
+it('excludes queries against this package\'s own logging tables', function () {
+    $tracker = app(QueryTracker::class);
+
+    $tracker->startTracking();
+    DB::select('select * from ai_chat_ui_events where id = ?', ['1']);
+    DB::select('select * from ai_chat_ui_turns where id = ?', ['1']);
+    DB::select('select 1'); // an unrelated query — must still be captured
+    $queries = $tracker->stopTracking();
+
+    expect($queries)->toHaveCount(1);
+    expect($queries[0]['sql'])->toBe('select 1');
+});

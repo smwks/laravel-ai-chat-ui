@@ -1,7 +1,7 @@
-@props(['event'])
+@props(['event', 'showIds' => true])
 
 <div x-data="{ tab: 'structured' }" class="space-y-4 p-1">
-    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'Tool: '.($event->payload['tool'] ?? ''), 'event' => $event])
+    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'Tool: '.($event->payload['tool'] ?? ''), 'event' => $event, 'showIds' => $showIds])
 
     <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 text-sm dark:bg-zinc-800">
         <button @click="tab = 'structured'" :class="tab === 'structured' ? 'bg-white shadow dark:bg-zinc-700' : ''" class="flex-1 rounded-md px-3 py-1">Structured</button>

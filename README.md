@@ -52,10 +52,15 @@ Livewire components under the `ai-chat-ui::components.chat` namespace:
   authenticated user's conversations.
 - `ai-chat-ui::components.chat.conversation` — the thread + "show thoughts" trace
   inspector for one conversation. Requires a `conversation` prop (a
-  `Laravel\Ai\Models\Conversation` instance), accepts an optional `initialMessage`
-  prop (a string) to auto-send a first message on mount, and an optional `agent`
-  prop (a class name string) to use an agent other than `config('ai-chat-ui.agent')`
-  for this conversation — see "Using your own agent" for running more than one bot.
+  `Laravel\Ai\Models\Conversation` instance) and accepts these optional props:
+  - `initialMessage` (string) — auto-send a first message on mount.
+  - `agent` (class name string) — use an agent other than `config('ai-chat-ui.agent')`
+    for this conversation; see "Using your own agent" for running more than one bot.
+  - `showThoughts` (bool, default `true`) — whether the "show thoughts" trace
+    inspector is available at all. This is ANDed with the `viewThoughts` policy
+    ability below — both must allow it for a user to see it.
+  - `showIds` (bool, default `true`) — whether the conversation id and each trace
+    event's id are shown (click-to-copy) in the UI.
 
 All three components require an authenticated user — they call `Auth::user()`
 internally and will throw rather than gracefully 403 for a guest. Your own routes/pages
@@ -183,6 +188,10 @@ identity:
 
 ## Extension points
 
+- Override `Smwks\LaravelAiChatUi\Policies\ConversationPolicy::viewThoughts()` (or swap
+  in your own policy via `Gate::policy(Conversation::class, ...)`) to restrict who can
+  see the "show thoughts" trace inspector — it defaults to the same rule as `view()`.
+  This is checked in addition to, not instead of, the `showThoughts` component prop.
 - Publish views (`--tag=ai-chat-ui-views`) and override
   `components/chat/partials/thought-details/generic.blade.php` to render domain-specific
   structured-output payloads.

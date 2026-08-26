@@ -22,6 +22,18 @@ new class extends Component {
      */
     public ?string $agent = null;
 
+    /**
+     * Whether the "show thoughts" trace inspector is available at all. This is
+     * ANDed with the viewThoughts policy ability below — both must allow it.
+     */
+    public bool $showThoughts = true;
+
+    /**
+     * Whether the conversation id and each trace event's id are shown (and
+     * click-to-copy) in the UI.
+     */
+    public bool $showIds = true;
+
     public string $message = '';
 
     public string $pendingUserMessage = '';
@@ -109,6 +121,12 @@ new class extends Component {
         return $this->agent ?? config('ai-chat-ui.agent');
     }
 
+    public function canViewThoughts(): bool
+    {
+        return $this->showThoughts
+            && Gate::forUser(Auth::user())->allows('viewThoughts', $this->conversation);
+    }
+
     public function checkTurnStatus(): void
     {
         if (!$this->pendingTurnId) {
@@ -127,6 +145,8 @@ new class extends Component {
 
     public function showDetails(string $eventId): void
     {
+        abort_unless($this->canViewThoughts(), 403);
+
         $this->selectedEventId = $eventId;
         $this->showEventDetails = true;
     }
@@ -316,7 +336,9 @@ new class extends Component {
     <div class="mx-auto flex h-screen max-w-3xl flex-col p-6">
         <div class="mb-4">
             <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
-            <span class="font-mono text-xs text-zinc-400">{{ $conversation->id }}</span>
+            @if ($showIds)
+                @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
+            @endif
         </div>
 
         <div class="flex-1 space-y-4 overflow-y-auto" id="message-thread">
@@ -330,7 +352,7 @@ new class extends Component {
                     @else
                         @php($turnEvents = $this->eventsByAssistantMessageId->get($msg->id, collect()))
 
-                        @if ($turnEvents->isNotEmpty())
+                        @if ($this->canViewThoughts() && $turnEvents->isNotEmpty())
                             <div x-data="{ open: false }" class="max-w-md">
                                 <button type="button" @click="open = !open"
                                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
@@ -373,32 +395,38 @@ new class extends Component {
             @endif
 
             @if ($streaming)
-                <div x-data="{ open: false }" class="max-w-md">
-                    <button type="button" @click="open = !open"
-                            class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                        <span x-show="!open" class="animate-pulse">▸ {{ $this->currentStatus }}</span>
-                        <span x-show="open" x-cloak>▾ hide thoughts</span>
-                    </button>
-                    <div x-show="open" x-cloak class="mt-2 space-y-2">
-                        @foreach ($this->visibleStreamingEvents() as $event)
-                            <div wire:key="stream-event-{{ $event->id }}"
-                                 class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
-                                <div class="flex items-center gap-2">
-                                    <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
-                                    @if ($subtitle = $this->eventSubtitle($event))
-                                        <span class="min-w-0 flex-1 truncate text-zinc-400">{{ $subtitle }}</span>
-                                    @else
-                                        <span class="flex-1"></span>
-                                    @endif
-                                    <button type="button" wire:click="showDetails('{{ $event->id }}')"
-                                            class="shrink-0 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                                        details
-                                    </button>
+                @if ($this->canViewThoughts())
+                    <div x-data="{ open: false }" class="max-w-md">
+                        <button type="button" @click="open = !open"
+                                class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                            <span x-show="!open" class="animate-pulse">▸ {{ $this->currentStatus }}</span>
+                            <span x-show="open" x-cloak>▾ hide thoughts</span>
+                        </button>
+                        <div x-show="open" x-cloak class="mt-2 space-y-2">
+                            @foreach ($this->visibleStreamingEvents() as $event)
+                                <div wire:key="stream-event-{{ $event->id }}"
+                                     class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
+                                    <div class="flex items-center gap-2">
+                                        <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                        @if ($subtitle = $this->eventSubtitle($event))
+                                            <span class="min-w-0 flex-1 truncate text-zinc-400">{{ $subtitle }}</span>
+                                        @else
+                                            <span class="flex-1"></span>
+                                        @endif
+                                        <button type="button" wire:click="showDetails('{{ $event->id }}')"
+                                                class="shrink-0 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                            details
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
-                </div>
+                @else
+                    <div class="max-w-md text-xs text-zinc-400">
+                        <span class="animate-pulse">{{ $this->currentStatus }}</span>
+                    </div>
+                @endif
             @endif
         </div>
 
@@ -442,7 +470,7 @@ new class extends Component {
             </div>
 
             @if ($this->selectedEvent)
-                @include($this->detailView($this->selectedEvent), ['event' => $this->selectedEvent])
+                @include($this->detailView($this->selectedEvent), ['event' => $this->selectedEvent, 'showIds' => $showIds])
             @endif
         </div>
     </div>

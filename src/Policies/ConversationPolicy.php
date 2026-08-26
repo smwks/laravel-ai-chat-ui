@@ -17,4 +17,15 @@ class ConversationPolicy
     {
         return $this->sendMessage($user, $conversation);
     }
+
+    /**
+     * Whether the user may see the "show thoughts" trace inspector for this
+     * conversation. Defaults to the same rule as view() — override this in your
+     * own policy (e.g. restrict to admins) if thoughts should be visible to fewer
+     * people than the conversation itself.
+     */
+    public function viewThoughts(Authenticatable $user, Conversation $conversation): bool
+    {
+        return $this->view($user, $conversation);
+    }
 }

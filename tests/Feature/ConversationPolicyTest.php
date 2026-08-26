@@ -14,6 +14,27 @@ class ConversationPolicyTestUser extends Authenticatable
     protected $fillable = ['name'];
 }
 
+it('defaults viewThoughts to the same rule as view', function () {
+    Schema::create('users', function ($table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+
+    $owner = ConversationPolicyTestUser::create(['name' => 'Owner']);
+    $stranger = ConversationPolicyTestUser::create(['name' => 'Stranger']);
+
+    $conversation = Conversation::create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => ConversationPolicyTestUser::class,
+        'participant_id' => $owner->id,
+        'title' => 'Test conversation',
+    ]);
+
+    expect(Gate::forUser($owner)->allows('viewThoughts', $conversation))->toBeTrue();
+    expect(Gate::forUser($stranger)->allows('viewThoughts', $conversation))->toBeFalse();
+});
+
 it('allows only the owning participant to send messages', function () {
     Schema::create('users', function ($table) {
         $table->id();
