@@ -400,8 +400,8 @@ it('renders one merged http-exchange detail panel with request and response bodi
             'url' => 'https://proxy.example.com/chat/completions',
             'status' => 200,
             'duration_ms' => 842.5,
-            'request' => ['headers' => [], 'body' => ['model' => 'claude-sonnet-5']],
-            'response' => ['headers' => [], 'body' => ['id' => 'resp-123']],
+            'request' => ['headers' => ['content-type' => ['application/json']], 'body' => ['model' => 'claude-sonnet-5']],
+            'response' => ['headers' => ['content-type' => ['application/json'], 'x-request-id' => ['abc-123']], 'body' => ['id' => 'resp-123']],
         ],
     ]);
 
@@ -415,7 +415,10 @@ it('renders one merged http-exchange detail panel with request and response bodi
     expect($html)->toContain('842.5ms');
     expect($html)->toContain('claude-sonnet-5');
     expect($html)->toContain('resp-123');
+    expect($html)->toContain('content-type');
+    expect($html)->toContain('x-request-id');
     expect($html)->not->toContain('<json-viewer');
+    expect($html)->not->toContain('>Raw</button>');
 });
 
 it('renders the new json tree viewer, not the old custom element, on the tool raw tab', function () {
