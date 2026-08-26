@@ -61,7 +61,7 @@ new class extends Component
     }
 }; ?>
 
-<div class="mx-auto max-w-4xl p-6">
+<div class="w-full p-6">
     <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
 
     <input
@@ -74,10 +74,10 @@ new class extends Component
     <table class="w-full text-left text-sm">
         <thead class="border-b border-zinc-200 text-zinc-400 dark:border-zinc-700">
             <tr>
-                <th class="py-2">Title</th>
-                <th class="py-2">Messages</th>
-                <th class="py-2">Model</th>
-                <th class="py-2">Tokens</th>
+                <th class="py-2 pr-4">Title</th>
+                <th class="py-2 pr-4">Messages</th>
+                <th class="py-2 pr-4">Model</th>
+                <th class="py-2 pr-4">Tokens</th>
                 <th class="py-2">Updated</th>
             </tr>
         </thead>
@@ -89,11 +89,11 @@ new class extends Component
                     wire:click="selectConversation('{{ $conversation->id }}')"
                     class="cursor-pointer border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
                 >
-                    <td class="py-2 hover:underline">{{ $conversation->title }}</td>
-                    <td class="py-2">{{ $conversation->messages_count }}</td>
-                    <td class="py-2 font-mono text-xs">{{ $stats['model'] ?? '—' }}</td>
-                    <td class="py-2">{{ $stats['total_tokens'] }}</td>
-                    <td class="py-2 text-zinc-400">{{ $conversation->updated_at?->diffForHumans() }}</td>
+                    <td class="py-2 pr-4 hover:underline">{{ $conversation->title }}</td>
+                    <td class="py-2 pr-4">{{ $conversation->messages_count }}</td>
+                    <td class="py-2 pr-4 font-mono text-xs whitespace-nowrap">{{ $stats['model'] ?? '—' }}</td>
+                    <td class="py-2 pr-4">{{ $stats['total_tokens'] }}</td>
+                    <td class="py-2 text-zinc-400 whitespace-nowrap">{{ $conversation->updated_at?->diffForHumans() }}</td>
                 </tr>
             @endforeach
         </tbody>
