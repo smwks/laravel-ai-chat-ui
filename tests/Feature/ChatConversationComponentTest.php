@@ -537,6 +537,61 @@ it('treats a missing http source as a provider call for indentation, for events 
     expect($component->instance()->eventIndentClass($legacyExchange))->toBe('ml-6');
 });
 
+it('shows the provider and model as the llm.request subtitle', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $event = new ConversationEvent([
+        'event_type' => 'llm.request',
+        'payload' => ['provider' => 'Laravel\\Ai\\Providers\\OpenAiCompatibleProvider', 'model' => 'claude-haiku-4-5'],
+    ]);
+
+    expect($component->instance()->eventSubtitle($event))->toBe('OpenAiCompatibleProvider · claude-haiku-4-5');
+});
+
+it('shows the method and host as the http.exchange subtitle', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $event = new ConversationEvent([
+        'event_type' => 'http.exchange',
+        'payload' => ['method' => 'POST', 'url' => 'https://proxy.knuckles.ziffmedia.cloud/chat/completions'],
+    ]);
+
+    expect($component->instance()->eventSubtitle($event))->toBe('POST proxy.knuckles.ziffmedia.cloud');
+});
+
+it('shows the tool name as the tool.invoked subtitle', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $event = new ConversationEvent(['event_type' => 'tool.invoked', 'payload' => ['tool' => 'FindTreasureTool']]);
+
+    expect($component->instance()->eventSubtitle($event))->toBe('FindTreasureTool');
+});
+
+it('has no subtitle for event types that carry no extra summary info', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $event = new ConversationEvent(['event_type' => 'llm.response', 'payload' => ['text' => 'hi']]);
+
+    expect($component->instance()->eventSubtitle($event))->toBeNull();
+});
+
+it('does not blow up when llm.request/http.exchange payloads are missing the subtitle fields', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    expect($component->instance()->eventSubtitle(new ConversationEvent(['event_type' => 'llm.request', 'payload' => []])))->toBeNull();
+    expect($component->instance()->eventSubtitle(new ConversationEvent(['event_type' => 'http.exchange', 'payload' => []])))->toBeNull();
+});
+
 it('still uses the built-in tool partial for a different tool not covered by the mapping', function () {
     [$user, $conversation] = makeConversationFixture();
 

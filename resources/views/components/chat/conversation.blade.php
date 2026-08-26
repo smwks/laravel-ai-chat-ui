@@ -218,6 +218,27 @@ new class extends Component {
         };
     }
 
+    /**
+     * A short, muted hint shown next to the label in the trace list — e.g. the
+     * model for an llm.request, the domain for an http.exchange, the tool name
+     * for a tool.invoked — without needing to open the details panel.
+     */
+    public function eventSubtitle(ConversationEvent $event): ?string
+    {
+        return match ($event->event_type) {
+            'llm.request' => implode(' · ', array_filter([
+                isset($event->payload['provider']) ? class_basename($event->payload['provider']) : null,
+                $event->payload['model'] ?? null,
+            ])) ?: null,
+            'http.exchange' => implode(' ', array_filter([
+                $event->payload['method'] ?? null,
+                isset($event->payload['url']) ? parse_url($event->payload['url'], PHP_URL_HOST) : null,
+            ])) ?: null,
+            'tool.invoked' => $event->payload['tool'] ?? null,
+            default => null,
+        };
+    }
+
     public function detailView(ConversationEvent $event): string
     {
         if ($event->event_type === 'tool.invoked') {
@@ -306,11 +327,15 @@ new class extends Component {
                                     @foreach ($turnEvents as $event)
                                         <div wire:key="event-{{ $event->id }}"
                                              class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
-                                            <div class="flex items-center justify-between">
-                                                <span
-                                                    class="font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                                @if ($subtitle = $this->eventSubtitle($event))
+                                                    <span class="min-w-0 flex-1 truncate text-zinc-400">{{ $subtitle }}</span>
+                                                @else
+                                                    <span class="flex-1"></span>
+                                                @endif
                                                 <button type="button" wire:click="showDetails('{{ $event->id }}')"
-                                                        class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                                        class="shrink-0 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                                     details
                                                 </button>
                                             </div>
@@ -345,10 +370,15 @@ new class extends Component {
                         @foreach ($this->visibleStreamingEvents() as $event)
                             <div wire:key="stream-event-{{ $event->id }}"
                                  class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
-                                <div class="flex items-center justify-between">
-                                    <span class="font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
+                                    @if ($subtitle = $this->eventSubtitle($event))
+                                        <span class="min-w-0 flex-1 truncate text-zinc-400">{{ $subtitle }}</span>
+                                    @else
+                                        <span class="flex-1"></span>
+                                    @endif
                                     <button type="button" wire:click="showDetails('{{ $event->id }}')"
-                                            class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                            class="shrink-0 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                         details
                                     </button>
                                 </div>
