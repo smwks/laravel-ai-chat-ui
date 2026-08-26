@@ -405,6 +405,7 @@ new class extends Component {
     </div>
 
     <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
+    <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
     <script>
         document.addEventListener('livewire:navigated', () => scrollAiChatUiThreadToBottom());
         document.addEventListener('livewire:update', () => scrollAiChatUiThreadToBottom());

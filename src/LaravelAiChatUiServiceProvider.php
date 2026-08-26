@@ -54,6 +54,7 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__.'/../resources/js/json-viewer.min.js' => public_path('vendor/ai-chat-ui/json-viewer.min.js'),
+            __DIR__.'/../resources/js/json-tree-search.js' => public_path('vendor/ai-chat-ui/json-tree-search.js'),
         ], 'ai-chat-ui-assets');
 
         $this->publishes([

@@ -30,16 +30,16 @@
 
         <div x-show="side === 'request'">
             <div class="mb-1 text-sm text-zinc-400">Body</div>
-            <pre class="overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{{ json_encode($event->payload['request']['body'] ?? null, JSON_PRETTY_PRINT) }}</pre>
+            @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload['request']['body'] ?? null])
         </div>
 
         <div x-show="side === 'response'">
             <div class="mb-1 text-sm text-zinc-400">Body</div>
-            <pre class="overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{{ json_encode($event->payload['response']['body'] ?? null, JSON_PRETTY_PRINT) }}</pre>
+            @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload['response']['body'] ?? null])
         </div>
     </div>
 
     <div x-show="tab === 'raw'">
-        <pre class="overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{{ json_encode($event->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+        @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload])
     </div>
 </div>
