@@ -122,6 +122,25 @@ public function mount(\Laravel\Ai\Models\Conversation $conversation): void
 }
 ```
 
+## The JSON tree viewer
+
+Bodies and raw payloads in the "show thoughts" detail panels (HTTP Exchange, Tool,
+LLM Request, LLM Response) render through a small built-in JSON tree viewer — no
+external JS dependency, just a recursive Blade partial with Alpine handling
+interaction. It's intentionally plain: monochrome, 2-space indentation, no visible
+buttons or chrome except the search box.
+
+- **Collapse/expand** — click an opening `{` or `[` to collapse that object/array to
+  `{ ... }` / `[ ... ]` inline; click it again to re-expand. Every object/array has its
+  own independent collapsed state.
+- **Search** — the box at the top does a plain-text search across the whole tree (not
+  JSON-aware), highlights every match, and automatically expands any collapsed
+  ancestor so a match is never hidden inside a collapsed node.
+
+The `generic` fallback partial (used for event types with no dedicated view) still
+renders its Raw tab through an older `<json-viewer>` custom element rather than this
+one — a known inconsistency, not yet swapped over.
+
 ## Using your own agent
 
 Set `config('ai-chat-ui.agent')` to your own agent's class name. It only needs to satisfy
