@@ -418,6 +418,81 @@ it('renders one merged http-exchange detail panel with request and response bodi
     expect($html)->not->toContain('<json-viewer');
 });
 
+it('renders the new json tree viewer, not the old custom element, on the tool raw tab', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Complete,
+    ]);
+
+    $event = ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'tool.invoked',
+        'payload' => ['tool' => 'weather', 'parameters' => ['city' => 'NYC'], 'result' => 'Sunny'],
+    ]);
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->call('showDetails', $event->id)
+        ->html();
+
+    expect($html)->toContain('placeholder="Search…"');
+    expect($html)->not->toContain('<json-viewer');
+});
+
+it('renders the new json tree viewer, not the old custom element, on the llm.request raw tab', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Complete,
+    ]);
+
+    $event = ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['provider' => 'openai', 'model' => 'gpt-5', 'prompt' => 'hi', 'messages' => [], 'tools' => []],
+    ]);
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->call('showDetails', $event->id)
+        ->html();
+
+    expect($html)->toContain('placeholder="Search…"');
+    expect($html)->not->toContain('<json-viewer');
+});
+
+it('renders the new json tree viewer, not the old custom element, on the llm.response raw tab', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Complete,
+    ]);
+
+    $event = ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.response',
+        'payload' => ['text' => 'hello there', 'usage' => [], 'meta' => []],
+    ]);
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->call('showDetails', $event->id)
+        ->html();
+
+    expect($html)->toContain('placeholder="Search…"');
+    expect($html)->not->toContain('<json-viewer');
+});
+
 it('does not indent llm.request and llm.response, which bracket the whole prompt() call', function () {
     [, $conversation] = makeConversationFixture();
 

@@ -57,6 +57,6 @@
     </div>
 
     <div x-show="tab === 'raw'">
-        @include('ai-chat-ui::components.chat.partials.thought-details._raw-tab', ['payload' => $event->payload])
+        @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload])
     </div>
 </div>
