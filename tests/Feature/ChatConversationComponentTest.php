@@ -15,6 +15,7 @@ use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Models\ConversationTurn;
 use Smwks\LaravelAiChatUi\Policies\ConversationPolicy;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
 
 class ChatConversationComponentTestUser extends Authenticatable
 {
@@ -80,6 +81,37 @@ it('sends the given initial message on mount and dispatches a job', function () 
     });
 
     expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(1);
+});
+
+it('dispatches the job with config(ai-chat-ui.agent) when no agent prop is given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'initialMessage' => 'Hello there',
+    ]);
+
+    Bus::assertDispatched(ProcessChatMessage::class, function (ProcessChatMessage $job) {
+        return $job->agentClass === config('ai-chat-ui.agent');
+    });
+});
+
+it('dispatches the job with the given agent prop instead of the config default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'agent' => EchoToolAgent::class,
+        'initialMessage' => 'Hello there',
+    ]);
+
+    Bus::assertDispatched(ProcessChatMessage::class, function (ProcessChatMessage $job) {
+        return $job->agentClass === EchoToolAgent::class;
+    });
 });
 
 it('does not auto-send a turn when no initial message is given', function () {
@@ -187,7 +219,7 @@ it('groups trace events under the assistant message from the same turn', functio
         'status' => ConversationTurnStatus::Pending,
     ]);
 
-    (new ProcessChatMessage($turn, 'hi'))->handle();
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
 
     ConversationEvent::create([
         'conversation_id' => $conversation->id,
@@ -364,7 +396,7 @@ it('excludes tool.invoking events from the historical grouped trace list', funct
         'status' => ConversationTurnStatus::Pending,
     ]);
 
-    (new ProcessChatMessage($turn, 'hi'))->handle();
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
 
     ConversationEvent::create([
         'conversation_id' => $conversation->id,

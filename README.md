@@ -52,8 +52,10 @@ Livewire components under the `ai-chat-ui::components.chat` namespace:
   authenticated user's conversations.
 - `ai-chat-ui::components.chat.conversation` — the thread + "show thoughts" trace
   inspector for one conversation. Requires a `conversation` prop (a
-  `Laravel\Ai\Models\Conversation` instance) and accepts an optional `initialMessage`
-  prop (a string) to auto-send a first message on mount.
+  `Laravel\Ai\Models\Conversation` instance), accepts an optional `initialMessage`
+  prop (a string) to auto-send a first message on mount, and an optional `agent`
+  prop (a class name string) to use an agent other than `config('ai-chat-ui.agent')`
+  for this conversation — see "Using your own agent" for running more than one bot.
 
 All three components require an authenticated user — they call `Auth::user()`
 internally and will throw rather than gracefully 403 for a guest. Your own routes/pages
@@ -134,6 +136,37 @@ class SupportAgent implements Agent, Conversational
 // config/ai-chat-ui.php
 'agent' => App\Ai\Agents\SupportAgent::class,
 ```
+
+### Running more than one bot
+
+`config('ai-chat-ui.agent')` is a single, app-wide default. For a site with several
+distinct bots, pass the `agent` prop to `components.chat.conversation` instead — it
+overrides the config default for that conversation:
+
+```blade
+{{-- resources/views/pages/support/chat/⚡conversation.blade.php --}}
+<livewire:ai-chat-ui::components.chat.conversation
+    :conversation="$conversation"
+    :initial-message="$initialMessage"
+    agent="App\Ai\Agents\SupportAgent"
+/>
+```
+
+```blade
+{{-- resources/views/pages/sales/chat/⚡conversation.blade.php --}}
+<livewire:ai-chat-ui::components.chat.conversation
+    :conversation="$conversation"
+    :initial-message="$initialMessage"
+    agent="App\Ai\Agents\SalesAgent"
+/>
+```
+
+This package doesn't persist which agent a conversation belongs to — it has no
+tables of its own (see "Prerequisite"). So resuming a conversation correctly depends
+on your own routing consistently pairing a conversation with the right agent, e.g. by
+giving each bot its own URL prefix (`/support/chat/{conversation}` vs
+`/sales/chat/{conversation}`) the way the two pages above illustrate, rather than one
+shared `chat.conversation` route used for every bot.
 
 ## Trace correlation — important if you extend this package
 

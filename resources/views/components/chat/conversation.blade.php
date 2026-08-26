@@ -14,6 +14,14 @@ use Smwks\LaravelAiChatUi\Models\ConversationTurn;
 new class extends Component {
     public Conversation $conversation;
 
+    /**
+     * Agent class to use for this conversation, e.g. App\Ai\Agents\SupportAgent::class.
+     * Falls back to config('ai-chat-ui.agent') when not given — pass this explicitly
+     * when a site embeds more than one bot, so each host page pins its own agent
+     * rather than sharing the single globally-configured one.
+     */
+    public ?string $agent = null;
+
     public string $message = '';
 
     public string $pendingUserMessage = '';
@@ -93,7 +101,12 @@ new class extends Component {
         $this->pendingTurnId = $turn->id;
         $this->streaming = true;
 
-        ProcessChatMessage::dispatch($turn, $text);
+        ProcessChatMessage::dispatch($turn, $text, $this->resolvedAgentClass());
+    }
+
+    protected function resolvedAgentClass(): string
+    {
+        return $this->agent ?? config('ai-chat-ui.agent');
     }
 
     public function checkTurnStatus(): void

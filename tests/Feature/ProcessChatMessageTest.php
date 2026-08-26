@@ -8,6 +8,7 @@ use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
 use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
 use Smwks\LaravelAiChatUi\Models\ConversationTurn;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
 
 class ProcessChatMessageTestUser extends Authenticatable
 {
@@ -51,7 +52,7 @@ it('drives a turn from pending to complete and persists the assistant message', 
 
     EchoAgent::fake(['Echo: hi there']);
 
-    (new ProcessChatMessage($turn, 'hi there'))->handle();
+    (new ProcessChatMessage($turn, 'hi there', EchoAgent::class))->handle();
 
     $turn->refresh();
     expect($turn->status)->toBe(ConversationTurnStatus::Complete);
@@ -70,9 +71,26 @@ it('marks the turn failed and rethrows when the agent throws', function () {
         throw new RuntimeException('provider unavailable');
     });
 
-    expect(fn () => (new ProcessChatMessage($turn, 'hi there'))->handle())
+    expect(fn () => (new ProcessChatMessage($turn, 'hi there', EchoAgent::class))->handle())
         ->toThrow(RuntimeException::class, 'provider unavailable');
 
     $turn->refresh();
     expect($turn->status)->toBe(ConversationTurnStatus::Failed);
+});
+
+it('prompts the given agentClass rather than the config-default agent', function () {
+    [$conversation, $turn] = makeTurnFixture();
+
+    EchoAgent::fake(['should never be used']);
+    EchoToolAgent::fake(['Echo tool agent replied']);
+
+    (new ProcessChatMessage($turn, 'hi there', EchoToolAgent::class))->handle();
+
+    EchoAgent::assertNeverPrompted();
+    EchoToolAgent::assertPrompted('hi there');
+
+    $conversation->refresh();
+    $assistantMessage = $conversation->messages()->where('role', 'assistant')->latest('id')->first();
+
+    expect($assistantMessage->content)->toBe('Echo tool agent replied');
 });

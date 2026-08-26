@@ -15,7 +15,7 @@ class ProcessChatMessage implements ShouldQueue
 {
     use Dispatchable, Queueable;
 
-    public function __construct(public ConversationTurn $turn, public string $message)
+    public function __construct(public ConversationTurn $turn, public string $message, public string $agentClass)
     {
         $this->onConnection(config('ai-chat-ui.queue.connection'));
         $this->onQueue(config('ai-chat-ui.queue.name', 'default'));
@@ -31,7 +31,7 @@ class ProcessChatMessage implements ShouldQueue
         Context::add('ai-chat-ui.turn_id', $this->turn->id);
 
         try {
-            $agent = app(config('ai-chat-ui.agent'));
+            $agent = app($this->agentClass);
 
             $agent->continue($this->turn->conversation_id, as: $this->turn->participant)
                 ->prompt($this->message);
