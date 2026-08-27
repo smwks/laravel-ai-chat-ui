@@ -20,10 +20,12 @@ class CaptureToolInvoked
         // the next tool call regardless of who made this one.
         $queries = $this->tracker->stopTracking();
 
-        // Same reasoning as the tracker stop above: always clear this, even when
+        // Same reasoning as the tracker stop above: always clear these, even when
         // we won't write an event, so a nested/failed tool call never leaves a
-        // stale tool_source attributing an unrelated later HTTP call to it.
+        // stale tool_source/tool_invocation_id attributing an unrelated later
+        // HTTP call to it.
         Context::forget('ai-chat-ui.tool_source');
+        Context::forget('ai-chat-ui.tool_invocation_id');
 
         if (! Context::has('ai-chat-ui.conversation_id')) {
             return;

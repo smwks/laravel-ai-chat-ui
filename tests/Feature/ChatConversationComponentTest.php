@@ -245,6 +245,105 @@ it('groups trace events under the assistant message from the same turn', functio
     expect($grouped->get($assistantMessage->id)->pluck('event_type')->all())->toContain('llm.request');
 });
 
+it('reorders a tool\'s own http.exchange to render after the tool.invoked box, not before it', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    // Written in the order they really happen: the tool's own HTTP call
+    // completes (and is logged) during handle(), strictly before the
+    // tool.invoked event that's only written once handle() returns.
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'http.exchange',
+        'payload' => ['source' => 'FetchPageTool', 'tool_invocation_id' => 'call-1'],
+    ]);
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'tool.invoked',
+        'payload' => ['tool' => 'FetchPageTool', 'tool_invocation_id' => 'call-1'],
+    ]);
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
+    $types = $component->instance()->eventsByAssistantMessageId()->get($assistantMessage->id)->pluck('event_type')->all();
+
+    $toolIndex = array_search('tool.invoked', $types, true);
+    $httpIndex = array_search('http.exchange', $types, true);
+
+    expect($toolIndex)->not->toBeFalse();
+    expect($httpIndex)->toBeGreaterThan($toolIndex);
+});
+
+it('groups each http.exchange under the correct call when the same tool runs twice in one turn', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'http.exchange',
+        'payload' => ['source' => 'FetchPageTool', 'tool_invocation_id' => 'call-1', 'url' => 'https://example.com/one'],
+    ]);
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'tool.invoked',
+        'payload' => ['tool' => 'FetchPageTool', 'tool_invocation_id' => 'call-1'],
+    ]);
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'http.exchange',
+        'payload' => ['source' => 'FetchPageTool', 'tool_invocation_id' => 'call-2', 'url' => 'https://example.com/two'],
+    ]);
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'tool.invoked',
+        'payload' => ['tool' => 'FetchPageTool', 'tool_invocation_id' => 'call-2'],
+    ]);
+
+    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+
+    $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
+    $events = $component->instance()->eventsByAssistantMessageId()->get($assistantMessage->id)->values();
+
+    // Each http.exchange should immediately follow the tool.invoked with the
+    // matching tool_invocation_id — never the other call's.
+    for ($i = 0; $i < $events->count(); $i++) {
+        if ($events[$i]->event_type !== 'tool.invoked') {
+            continue;
+        }
+
+        $next = $events->get($i + 1);
+        expect($next->event_type)->toBe('http.exchange');
+        expect($next->payload['tool_invocation_id'])->toBe($events[$i]->payload['tool_invocation_id']);
+    }
+});
+
 it('does not leak a trace event belonging to another conversation via showDetails', function () {
     [, $conversationA] = makeConversationFixture();
 

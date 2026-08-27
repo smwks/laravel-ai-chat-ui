@@ -183,7 +183,54 @@ new class extends Component {
             $assistantMessage = $assistantMessages->get($index);
 
             if ($assistantMessage) {
-                $result->put($assistantMessage->id, $eventsByTurn->get($turn->id, collect()));
+                $result->put($assistantMessage->id, $this->reorderEventsForDisplay($eventsByTurn->get($turn->id, collect())));
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Events are stored in strict chronological order, but a tool's own HTTP
+     * call finishes (and is written) *during* that tool's handle() — before
+     * the tool.invoked event itself, which is only written once handle()
+     * returns. Left in raw order, a tool's HTTP child would render above its
+     * own Tool box instead of nested under it. This defers each http.exchange
+     * event tied to a tool_invocation_id until that invocation's tool.invoked
+     * event is emitted, then renders it immediately after — grouped by
+     * invocation id rather than tool name, so calling the same tool twice in
+     * one turn doesn't mix up which HTTP calls belong to which call.
+     */
+    protected function reorderEventsForDisplay(\Illuminate\Support\Collection $events): \Illuminate\Support\Collection
+    {
+        $pendingByInvocation = [];
+        $result = collect();
+
+        foreach ($events as $event) {
+            $invocationId = $event->payload['tool_invocation_id'] ?? null;
+
+            if ($event->event_type === 'http.exchange' && $invocationId) {
+                $pendingByInvocation[$invocationId][] = $event;
+
+                continue;
+            }
+
+            $result->push($event);
+
+            if ($event->event_type === 'tool.invoked' && $invocationId && isset($pendingByInvocation[$invocationId])) {
+                foreach ($pendingByInvocation[$invocationId] as $child) {
+                    $result->push($child);
+                }
+
+                unset($pendingByInvocation[$invocationId]);
+            }
+        }
+
+        // A child whose tool.invoked never showed up (shouldn't normally happen)
+        // is still shown, just at the end, rather than silently dropped.
+        foreach ($pendingByInvocation as $children) {
+            foreach ($children as $child) {
+                $result->push($child);
             }
         }
 
@@ -209,7 +256,9 @@ new class extends Component {
      */
     public function visibleStreamingEvents(): \Illuminate\Support\Collection
     {
-        return $this->streamingEvents->where('event_type', '!=', 'tool.invoking');
+        return $this->reorderEventsForDisplay(
+            $this->streamingEvents->where('event_type', '!=', 'tool.invoking')
+        );
     }
 
     #[Computed]

@@ -18,8 +18,11 @@ class CaptureToolInvoking
 
         // Set for the duration of the tool's handle() call so any outbound HTTP
         // request captured by the global HTTP middleware in that window can be
-        // attributed to this tool rather than mistaken for a provider call.
+        // attributed to this tool rather than mistaken for a provider call, and
+        // grouped under the correct call if the same tool runs more than once
+        // in one turn.
         Context::add('ai-chat-ui.tool_source', class_basename($event->tool));
+        Context::add('ai-chat-ui.tool_invocation_id', $event->toolInvocationId);
 
         if (! Context::has('ai-chat-ui.conversation_id')) {
             return;

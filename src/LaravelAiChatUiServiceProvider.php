@@ -132,6 +132,7 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
                 'event_type' => 'http.exchange',
                 'payload' => [
                     'source' => Context::get('ai-chat-ui.tool_source', 'provider'),
+                    'tool_invocation_id' => Context::get('ai-chat-ui.tool_invocation_id'),
                     'method' => $pending['method'],
                     'url' => $pending['url'],
                     'status' => $response->getStatusCode(),

@@ -51,6 +51,25 @@ it('tags an http exchange made from inside a tool with that tool as its source',
     expect($exchange->payload['source'])->toBe('HttpCallingTool');
 });
 
+it('tags a tool-sourced http exchange with the same tool_invocation_id as its tool.invoked event', function () {
+    Http::fake(['https://example.com/*' => Http::response('tool response body', 200)]);
+
+    EchoHttpToolAgent::fake([
+        new ToolCall('call-1', 'HttpCallingTool', ['value' => 'x']),
+        'Done',
+    ]);
+
+    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http-invocation-id');
+
+    (new EchoHttpToolAgent)->prompt('use the tool');
+
+    $exchange = ConversationEvent::where('event_type', 'http.exchange')->first();
+    $invoked = ConversationEvent::where('event_type', 'tool.invoked')->first();
+
+    expect($exchange->payload['tool_invocation_id'])->not->toBeNull();
+    expect($exchange->payload['tool_invocation_id'])->toBe($invoked->payload['tool_invocation_id']);
+});
+
 it('does not leak a tool source onto an http exchange made after the tool call finishes', function () {
     Http::fake(['https://example.com/*' => Http::response('tool response body', 200)]);
 
