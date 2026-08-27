@@ -475,17 +475,22 @@ new class extends Component {
         </div>
     </div>
 
-    <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
-    <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
-    <script>
-        document.addEventListener('livewire:navigated', () => scrollAiChatUiThreadToBottom());
-        document.addEventListener('livewire:update', () => scrollAiChatUiThreadToBottom());
+    @assets
+        <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
+        <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
+    @endassets
 
-        function scrollAiChatUiThreadToBottom() {
-            const thread = document.getElementById('message-thread');
-            if (thread) thread.scrollTop = thread.scrollHeight;
-        }
+    @script
+        <script>
+            function scrollAiChatUiThreadToBottom() {
+                const thread = document.getElementById('message-thread');
+                if (thread) thread.scrollTop = thread.scrollHeight;
+            }
 
-        scrollAiChatUiThreadToBottom();
-    </script>
+            document.addEventListener('livewire:navigated', scrollAiChatUiThreadToBottom);
+            document.addEventListener('livewire:update', scrollAiChatUiThreadToBottom);
+
+            scrollAiChatUiThreadToBottom();
+        </script>
+    @endscript
 </div>
