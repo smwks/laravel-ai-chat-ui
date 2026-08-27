@@ -382,7 +382,7 @@ new class extends Component {
         <div wire:poll.1000ms="checkTurnStatus"></div>
     @endif
 
-    <div class="mx-auto flex h-screen max-w-3xl flex-col p-6">
+    <div class="mx-auto flex max-w-3xl flex-col p-6">
         <div class="mb-4">
             <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
             @if ($showIds)
@@ -390,7 +390,12 @@ new class extends Component {
             @endif
         </div>
 
-        <div class="flex-1 space-y-4 overflow-y-auto" id="message-thread">
+        {{-- No fixed height or overflow-y-auto here on purpose: this component doesn't own the
+             viewport, so it can't assume it's safe to scroll internally. A host embedding it inside
+             its own already-scrollable region (e.g. a Filament page) would otherwise end up with
+             two nested scrollbars fighting over the same content. Whatever ancestor scrolls (the
+             page itself, or a host-provided container) is the only scrollbar. --}}
+        <div class="space-y-4" id="message-thread">
             @foreach ($this->messages as $msg)
                 <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2">
                     @if ($msg->role === 'user')
