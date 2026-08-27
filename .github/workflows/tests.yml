@@ -11,10 +11,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [8.3, 8.4]
-        laravel: [12.*, 13.*]
+        php: [8.4, 8.5]
 
-    name: PHP ${{ matrix.php }} — Laravel ${{ matrix.laravel }}
+    # Laravel 13 only for now: pestphp/pest ^5.0 requires symfony/process ^8.1, but
+    # orchestra/testbench's Laravel-12-compatible line (^10.x) still pins
+    # symfony/process ^7.2 — the two can't currently be installed together, so
+    # Laravel 12 isn't testable here yet despite being an allowed version in
+    # composer.json's own `illuminate/support` constraint.
+    name: PHP ${{ matrix.php }} — Laravel 13.*
 
     steps:
       - uses: actions/checkout@v4
@@ -23,9 +27,6 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-
-      - name: Require Laravel ${{ matrix.laravel }}
-        run: composer require "illuminate/support:${{ matrix.laravel }}" --no-interaction --no-update
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
