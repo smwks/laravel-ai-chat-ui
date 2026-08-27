@@ -1,4 +1,6 @@
-# smwks/laravel-ai-chat-ui
+# Laravel AI Chat UI
+
+*`smwks/laravel-ai-chat-ui`*
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![PHP](https://img.shields.io/badge/php-%5E8.3-777bb4.svg)
@@ -13,17 +15,6 @@ without building any of it yourself.
 It ships as three plain, presentation-only Livewire components with no opinion on your routes or
 page chrome. Drop them into pages your own app already owns — or straight into a
 [Filament](https://filamentphp.com) panel page. Same components, either way.
-
-## Screenshots
-
-<p align="center">
-  <img src=".github/art/new-conversation.png" width="49%" alt="Starting a new conversation">
-  <img src=".github/art/thread.png" width="49%" alt="A conversation thread with a reply">
-</p>
-<p align="center">
-  <img src=".github/art/trace-inspector.png" width="49%" alt="The show-thoughts trace inspector, expanded, with a tool call and its HTTP request nested underneath it">
-  <img src=".github/art/filament-embed.png" width="49%" alt="The same chat component embedded in a Filament panel page">
-</p>
 
 ## Features
 
