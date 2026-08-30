@@ -904,3 +904,32 @@ it('hides an event id in the detail panel when the showIds prop is false', funct
         'showIds' => false,
     ])->call('showDetails', $event->id)->assertDontSee($event->id);
 });
+
+it('shows its own title header by default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee($conversation->title);
+});
+
+it('hides the title header and conversation id when showHeader is false', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showHeader' => false,
+    ])
+        ->assertDontSee($conversation->title)
+        ->assertDontSee($conversation->id);
+});
+
+it('uses a custom containerClass when given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'containerClass' => 'my-custom-wrapper',
+    ])
+        ->assertSeeHtml('my-custom-wrapper')
+        ->assertDontSeeHtml('max-w-3xl');
+});

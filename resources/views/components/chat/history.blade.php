@@ -13,6 +13,19 @@ new class extends Component
 {
     use WithPagination;
 
+    /**
+     * Whether the component renders its own <h1>. Turn off when the host
+     * page already renders its own page title.
+     */
+    public bool $showHeader = true;
+
+    /**
+     * Classes for the component's root element. Defaults to a sensible
+     * standalone layout; pass an empty string — or your own classes —
+     * when the host page already constrains width/padding.
+     */
+    public ?string $containerClass = null;
+
     public string $search = '';
 
     public function updatedSearch(): void
@@ -61,8 +74,10 @@ new class extends Component
     }
 }; ?>
 
-<div class="w-full p-6">
-    <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
+<div class="{{ $containerClass ?? 'w-full p-6' }}">
+    @if ($showHeader)
+        <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
+    @endif
 
     <input
         wire:model.live.debounce.300ms="search"

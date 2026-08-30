@@ -34,6 +34,20 @@ new class extends Component {
      */
     public bool $showIds = true;
 
+    /**
+     * Whether the component renders its own <h1> + conversation id header.
+     * Turn off when the host page already renders its own page title.
+     */
+    public bool $showHeader = true;
+
+    /**
+     * Classes for the component's root element. Defaults to a sensible
+     * standalone layout (centered, max width, padding); pass an empty
+     * string — or your own classes — when the host page already
+     * constrains width/padding, e.g. a Filament panel page.
+     */
+    public ?string $containerClass = null;
+
     public string $message = '';
 
     public string $pendingUserMessage = '';
@@ -382,13 +396,15 @@ new class extends Component {
         <div wire:poll.1000ms="checkTurnStatus"></div>
     @endif
 
-    <div class="mx-auto flex max-w-3xl flex-col p-6">
-        <div class="mb-4">
-            <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
-            @if ($showIds)
-                @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
-            @endif
-        </div>
+    <div class="{{ $containerClass ?? 'mx-auto flex max-w-3xl flex-col p-6' }}">
+        @if ($showHeader)
+            <div class="mb-4">
+                <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
+                @if ($showIds)
+                    @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
+                @endif
+            </div>
+        @endif
 
         {{-- No fixed height or overflow-y-auto here on purpose: this component doesn't own the
              viewport, so it can't assume it's safe to scroll internally. A host embedding it inside

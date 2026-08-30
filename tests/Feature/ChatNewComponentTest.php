@@ -34,6 +34,27 @@ it('renders the chat.new component', function () {
     Livewire::test('ai-chat-ui::components.chat.new')->assertOk();
 });
 
+it('shows its own heading by default', function () {
+    actingAsChatUser();
+
+    Livewire::test('ai-chat-ui::components.chat.new')->assertSee('New conversation');
+});
+
+it('hides the heading when showHeader is false', function () {
+    actingAsChatUser();
+
+    Livewire::test('ai-chat-ui::components.chat.new', ['showHeader' => false])
+        ->assertDontSee('New conversation');
+});
+
+it('uses a custom containerClass when given', function () {
+    actingAsChatUser();
+
+    Livewire::test('ai-chat-ui::components.chat.new', ['containerClass' => 'my-custom-wrapper'])
+        ->assertSeeHtml('my-custom-wrapper')
+        ->assertDontSeeHtml('max-w-2xl');
+});
+
 it('creates a conversation and dispatches ai-chat-ui-conversation-started', function () {
     $user = actingAsChatUser();
 
