@@ -1,9 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Models\ConversationMessage;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
@@ -139,6 +141,20 @@ new class extends Component {
     {
         return $this->showThoughts
             && Gate::forUser(Auth::user())->allows('viewThoughts', $this->conversation);
+    }
+
+    /**
+     * A message's content is immutable once written, so its rendered Markdown
+     * is cached forever by message id — without this, every message in the
+     * thread gets re-parsed on every re-render (e.g. each wire:poll tick
+     * while streaming), even though only the newest message actually changed.
+     */
+    public function renderedMarkdown(ConversationMessage $message): string
+    {
+        return Cache::rememberForever(
+            "ai-chat-ui.rendered-markdown.{$message->id}",
+            fn () => Str::markdown($message->content, ['html_input' => 'strip', 'allow_unsafe_links' => false])
+        );
     }
 
     public function checkTurnStatus(): void
@@ -451,7 +467,7 @@ new class extends Component {
                         @endif
 
                         <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-chat-ui="reply-body">
-                            {!! Str::markdown($msg->content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                            {!! $this->renderedMarkdown($msg) !!}
                         </div>
                     @endif
                 </div>
@@ -550,6 +566,7 @@ new class extends Component {
     @assets
         <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
         <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="{{ asset('vendor/ai-chat-ui/reply-body.css') }}" crossorigin="anonymous">
     @endassets
 
     @script

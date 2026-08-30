@@ -1,0 +1,112 @@
+/*
+ * Default styling for rendered Markdown inside an assistant reply
+ * (data-ai-chat-ui="reply-body"). Scoped to that attribute so it never
+ * leaks onto anything else on the host page. A CSS reset like Filament's
+ * or Tailwind's Preflight strips list markers, heading weight, and
+ * code/pre spacing by default — this restores just enough of it for a
+ * reply to read as structured text instead of a wall of run-together lines.
+ *
+ * Override any of this from your own stylesheet (these rules carry no
+ * !important), or skip loading this file entirely and publish your own via
+ * `--tag=ai-chat-ui-assets`.
+ */
+
+[data-ai-chat-ui="reply-body"] p {
+    margin: 0 0 0.75em;
+}
+
+[data-ai-chat-ui="reply-body"] p:last-child {
+    margin-bottom: 0;
+}
+
+[data-ai-chat-ui="reply-body"] h1,
+[data-ai-chat-ui="reply-body"] h2,
+[data-ai-chat-ui="reply-body"] h3,
+[data-ai-chat-ui="reply-body"] h4,
+[data-ai-chat-ui="reply-body"] h5,
+[data-ai-chat-ui="reply-body"] h6 {
+    font-weight: 600;
+    margin: 1em 0 0.5em;
+}
+
+[data-ai-chat-ui="reply-body"] h1:first-child,
+[data-ai-chat-ui="reply-body"] h2:first-child,
+[data-ai-chat-ui="reply-body"] h3:first-child,
+[data-ai-chat-ui="reply-body"] h4:first-child,
+[data-ai-chat-ui="reply-body"] h5:first-child,
+[data-ai-chat-ui="reply-body"] h6:first-child {
+    margin-top: 0;
+}
+
+[data-ai-chat-ui="reply-body"] ul,
+[data-ai-chat-ui="reply-body"] ol {
+    margin: 0 0 0.75em;
+    padding-left: 1.5em;
+}
+
+[data-ai-chat-ui="reply-body"] ul {
+    list-style-type: disc;
+}
+
+[data-ai-chat-ui="reply-body"] ol {
+    list-style-type: decimal;
+}
+
+[data-ai-chat-ui="reply-body"] li {
+    margin: 0.25em 0;
+}
+
+[data-ai-chat-ui="reply-body"] li > ul,
+[data-ai-chat-ui="reply-body"] li > ol {
+    margin-top: 0.25em;
+    margin-bottom: 0;
+}
+
+[data-ai-chat-ui="reply-body"] blockquote {
+    margin: 0 0 0.75em;
+    padding-left: 1em;
+    border-left: 2px solid currentColor;
+    opacity: 0.85;
+}
+
+[data-ai-chat-ui="reply-body"] code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    padding: 0.125em 0.35em;
+    border-radius: 0.25em;
+    background: rgba(127, 127, 127, 0.15);
+}
+
+[data-ai-chat-ui="reply-body"] pre {
+    margin: 0 0 0.75em;
+    padding: 0.75em 1em;
+    border-radius: 0.5em;
+    background: rgba(127, 127, 127, 0.15);
+    overflow-x: auto;
+}
+
+[data-ai-chat-ui="reply-body"] pre code {
+    padding: 0;
+    background: none;
+}
+
+[data-ai-chat-ui="reply-body"] a {
+    text-decoration: underline;
+}
+
+[data-ai-chat-ui="reply-body"] hr {
+    margin: 1em 0;
+    border: none;
+    border-top: 1px solid rgba(127, 127, 127, 0.3);
+}
+
+[data-ai-chat-ui="reply-body"] table {
+    border-collapse: collapse;
+    margin: 0 0 0.75em;
+}
+
+[data-ai-chat-ui="reply-body"] th,
+[data-ai-chat-ui="reply-body"] td {
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    padding: 0.35em 0.6em;
+}

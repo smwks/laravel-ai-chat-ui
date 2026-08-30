@@ -215,6 +215,38 @@ it('strips raw script tags and neutralizes unsafe link schemes when rendering as
     expect($html)->not->toContain('href="javascript:alert(1)"');
 });
 
+it('caches rendered markdown per message id instead of re-parsing on every render', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $message = $conversation->messages()->create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'agent' => 'echo',
+        'role' => 'assistant',
+        'content' => 'first content',
+        'attachments' => [],
+        'tool_calls' => [],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee('first content');
+
+    expect(\Illuminate\Support\Facades\Cache::has("ai-chat-ui.rendered-markdown.{$message->id}"))->toBeTrue();
+
+    // Seed a sentinel directly into the cache for this message id — a fresh
+    // render must reuse it rather than re-parsing $message->content, proving
+    // the cache is actually consulted rather than just incidentally populated.
+    \Illuminate\Support\Facades\Cache::forever("ai-chat-ui.rendered-markdown.{$message->id}", '<p>cached sentinel</p>');
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSeeHtml('cached sentinel')
+        ->assertDontSee('first content');
+});
+
 it('groups trace events under the assistant message from the same turn', function () {
     [$user, $conversation] = makeConversationFixture();
 
