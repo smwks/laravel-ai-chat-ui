@@ -1020,3 +1020,26 @@ it('makes the thread scroll and pins the composer when fillHeight is true', func
     expect($html)->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
     expect($html)->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
 });
+
+it('renders an auto-growing textarea composer wired to send on Enter, not Shift+Enter', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->toContain('<textarea');
+    expect($html)->not->toContain('<input');
+    expect($html)->toContain('wire:model="message"');
+    expect($html)->toContain('if (!$event.shiftKey) { $event.preventDefault(); $wire.sendMessage() }');
+});
+
+it('still sends the message when sendMessage is called, regardless of composer markup', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->set('message', 'hello via textarea')
+        ->call('sendMessage');
+
+    Bus::assertDispatched(ProcessChatMessage::class, fn (ProcessChatMessage $job) => $job->message === 'hello via textarea');
+});

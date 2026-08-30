@@ -537,13 +537,16 @@ new class extends Component {
         </div>
 
         <form wire:submit="sendMessage" class="mt-4 flex gap-2" data-ai-chat-ui="composer">
-            <input
+            <textarea
                 wire:model="message"
-                type="text"
+                rows="1"
                 placeholder="Type a message..."
                 @disabled($streaming)
-                class="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            >
+                x-data
+                x-on:input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
+                @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.sendMessage() }"
+                class="max-h-40 flex-1 resize-none overflow-y-auto rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            ></textarea>
             <button type="submit"
                     @disabled($streaming) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
                 Send
