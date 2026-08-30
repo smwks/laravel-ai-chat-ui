@@ -8,7 +8,8 @@
 [![Tests](https://github.com/smwks/laravel-ai-chat-ui/actions/workflows/tests.yml/badge.svg)](https://github.com/smwks/laravel-ai-chat-ui/actions/workflows/tests.yml)
 
 A drop-in Livewire chat UI and trace inspector for [`laravel/ai`](https://github.com/laravel/ai)
-agents. Give your users a real conversation UI, and give yourself a "show thoughts" panel that
+agents. Give your users a real conversation UI — messages run in a queued job and their status
+survives a page reload, not just a live stream — and give yourself a "show thoughts" panel that
 replays every LLM request/response, tool invocation, and raw HTTP exchange behind each reply —
 without building any of it yourself.
 
