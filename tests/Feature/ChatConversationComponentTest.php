@@ -215,6 +215,38 @@ it('strips raw script tags and neutralizes unsafe link schemes when rendering as
     expect($html)->not->toContain('href="javascript:alert(1)"');
 });
 
+it('caches rendered markdown per message id instead of re-parsing on every render', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    $message = $conversation->messages()->create([
+        'id' => (string) Str::uuid7(),
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'agent' => 'echo',
+        'role' => 'assistant',
+        'content' => 'first content',
+        'attachments' => [],
+        'tool_calls' => [],
+        'tool_results' => [],
+        'usage' => [],
+        'meta' => [],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee('first content');
+
+    expect(\Illuminate\Support\Facades\Cache::has("ai-chat-ui.rendered-markdown.{$message->id}"))->toBeTrue();
+
+    // Seed a sentinel directly into the cache for this message id — a fresh
+    // render must reuse it rather than re-parsing $message->content, proving
+    // the cache is actually consulted rather than just incidentally populated.
+    \Illuminate\Support\Facades\Cache::forever("ai-chat-ui.rendered-markdown.{$message->id}", '<p>cached sentinel</p>');
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSeeHtml('cached sentinel')
+        ->assertDontSee('first content');
+});
+
 it('groups trace events under the assistant message from the same turn', function () {
     [$user, $conversation] = makeConversationFixture();
 
@@ -787,6 +819,40 @@ it('shows the show-thoughts disclosure by default for a completed turn', functio
         ->assertSee('show thoughts');
 });
 
+it('exposes data-ai-chat-ui hooks for styling', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSeeHtml('data-ai-chat-ui="root"')
+        ->assertSeeHtml('data-ai-chat-ui="header"')
+        ->assertSeeHtml('data-ai-chat-ui="thread"')
+        ->assertSeeHtml('data-ai-chat-ui="composer"')
+        ->assertSeeHtml('data-ai-chat-ui="message"')
+        ->assertSeeHtml('data-ai-chat-ui-role="user"')
+        ->assertSeeHtml('data-ai-chat-ui-role="assistant"')
+        ->assertSeeHtml('data-ai-chat-ui="reply-body"')
+        ->assertSeeHtml('data-ai-chat-ui="thoughts-toggle"')
+        ->assertSeeHtml('data-ai-chat-ui="thought-event"');
+});
+
 it('hides the show-thoughts disclosure when the showThoughts prop is false', function () {
     [$user, $conversation] = makeConversationFixture();
 
@@ -903,4 +969,97 @@ it('hides an event id in the detail panel when the showIds prop is false', funct
         'conversation' => $conversation,
         'showIds' => false,
     ])->call('showDetails', $event->id)->assertDontSee($event->id);
+});
+
+it('shows its own title header by default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSee($conversation->title);
+});
+
+it('hides the title header and conversation id when showHeader is false', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'showHeader' => false,
+    ])
+        ->assertDontSee($conversation->title)
+        ->assertDontSee($conversation->id);
+});
+
+it('uses a custom containerClass when given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'containerClass' => 'my-custom-wrapper',
+    ])
+        ->assertSeeHtml('my-custom-wrapper')
+        ->assertDontSeeHtml('max-w-3xl');
+});
+
+it('does not make the thread its own scroll container by default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->not->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
+    expect($html)->not->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
+});
+
+it('makes the thread scroll and pins the composer when fillHeight is true', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'fillHeight' => true,
+    ])->html();
+
+    expect($html)->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
+    expect($html)->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
+});
+
+it('teleports the details panel to body with a default z-index of 50', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->toContain('x-teleport="body"');
+    expect($html)->toContain('style="z-index: 50"');
+});
+
+it('uses a custom detailsZIndex when given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'detailsZIndex' => 9999,
+    ])->html();
+
+    expect($html)->toContain('style="z-index: 9999"');
+});
+
+it('renders an auto-growing textarea composer wired to send on Enter, not Shift+Enter', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->toContain('<textarea');
+    expect($html)->not->toContain('<input');
+    expect($html)->toContain('wire:model="message"');
+    expect($html)->toContain('if (!$event.shiftKey) { $event.preventDefault(); $wire.sendMessage() }');
+});
+
+it('still sends the message when sendMessage is called, regardless of composer markup', function () {
+    [, $conversation] = makeConversationFixture();
+
+    Bus::fake();
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->set('message', 'hello via textarea')
+        ->call('sendMessage');
+
+    Bus::assertDispatched(ProcessChatMessage::class, fn (ProcessChatMessage $job) => $job->message === 'hello via textarea');
 });

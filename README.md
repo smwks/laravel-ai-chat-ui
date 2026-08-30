@@ -32,6 +32,9 @@ page chrome. Drop them into pages your own app already owns — or straight into
   can override, in addition to a component-level `showThoughts` prop.
 - **Extensible** — give any tool its own detail view or "thinking…" status message without
   forking or publishing anything.
+- **Themeable without forking views** — every structural element carries a stable
+  `data-ai-chat-ui="<role>"` hook, and a component's own heading/width/padding can be
+  turned off entirely for a host page that provides its own.
 - **Works in plain Livewire pages and in Filament panels** — see "Quick usage" below.
 
 ## Requirements
@@ -128,20 +131,65 @@ Livewire components under the `ai-chat-ui::components.chat` namespace:
   authenticated user's conversations.
 - `ai-chat-ui::components.chat.conversation` — the thread + "show thoughts" trace
   inspector for one conversation. Requires a `conversation` prop (a
-  `Laravel\Ai\Models\Conversation` instance) and accepts these optional props:
-  - `initialMessage` (string) — auto-send a first message on mount.
-  - `agent` (class name string) — use an agent other than `config('ai-chat-ui.agent')`
-    for this conversation; see "Using your own agent" for running more than one bot.
-  - `showThoughts` (bool, default `true`) — whether the "show thoughts" trace
-    inspector is available at all. This is ANDed with the `viewThoughts` policy
-    ability below — both must allow it for a user to see it.
-  - `showIds` (bool, default `true`) — whether the conversation id and each trace
-    event's id are shown (click-to-copy) in the UI.
+  `Laravel\Ai\Models\Conversation` instance).
 
 All three components require an authenticated user — they call `Auth::user()`
 internally and will throw rather than gracefully 403 for a guest. Your own routes/pages
 must enforce authentication (e.g. `Route::middleware(['web', 'auth'])`, or a Filament
 panel's own auth guard) before embedding any of them.
+
+### Presentation props
+
+All three components accept:
+
+- `showHeader` (bool, default `true`) — whether the component renders its own `<h1>`
+  (and, for `chat.conversation`, the conversation id block below it). Turn off when the
+  host page already renders its own page title, e.g. a Filament page's own heading.
+- `containerClass` (string, default `null`) — classes for the component's root element.
+  Left `null`, each component falls back to a sensible standalone layout (centered,
+  max width, padding); pass an empty string, or your own classes, when the host page
+  already constrains width/padding.
+
+`chat.conversation` additionally accepts:
+
+- `initialMessage` (string) — auto-send a first message on mount.
+- `agent` (class name string) — use an agent other than `config('ai-chat-ui.agent')`
+  for this conversation; see "Using your own agent" for running more than one bot.
+- `showThoughts` (bool, default `true`) — whether the "show thoughts" trace
+  inspector is available at all. This is ANDed with the `viewThoughts` policy
+  ability below — both must allow it for a user to see it.
+- `showIds` (bool, default `true`) — whether the conversation id and each trace
+  event's id are shown (click-to-copy) in the UI.
+- `fillHeight` (bool, default `false`) — makes the message thread its own scroll
+  container, filling whatever height the host gives it, with the composer pinned
+  below it. Only turn this on when the host actually hands the component a bounded
+  height (e.g. a fixed-height panel region) — otherwise the thread has nothing to
+  fill and won't scroll internally at all. Left off, the component renders with no
+  fixed height and relies on an ancestor (the page itself, or a host-provided
+  container) to scroll, so it never produces two nested scrollbars.
+- `detailsZIndex` (int, default `50`) — z-index for the trace details slide-over
+  panel, which is `x-teleport`'d to the end of `<body>`. Raise this when a host app's
+  own modal/toast layer (e.g. Filament's) sits above the default.
+
+### Styling hooks
+
+Every structural element carries a `data-ai-chat-ui="<role>"` attribute — `root`,
+`header`, `thread`, `message` (plus `data-ai-chat-ui-role="user"` / `"assistant"` on
+message bubbles), `reply-body`, `composer`, `thoughts-toggle`, `thought-event` — so you
+can theme any of it from your own stylesheet instead of forking views or writing
+brittle descendant selectors:
+
+```css
+[data-ai-chat-ui="message"][data-ai-chat-ui-role="user"] {
+    /* restyle the user's own message bubble */
+}
+```
+
+`chat.conversation` also ships a small default stylesheet for `reply-body` (list
+markers, heading/paragraph spacing, code/pre) — published via `--tag=ai-chat-ui-assets`
+alongside the JSON tree viewer's JS, so an assistant's Markdown reply still reads as
+structured text under a CSS reset like Filament's or Tailwind's Preflight. Override any
+of its rules from your own stylesheet, or skip loading it and publish your own.
 
 ### Navigation events
 
@@ -196,6 +244,84 @@ public function onConversationStarted(string $conversationId, string $message): 
     $this->initialMessage = $message;
 }
 ```
+
+### Filament: linkable, bookmarkable conversations
+
+The swap-in-place approach above is the fastest way to get started, but it keeps every
+conversation behind one URL — nothing to link to, bookmark, or open in a new tab. For
+that, give each of the three components its own Filament page instead, the same way you
+would with plain routes:
+
+```php
+// app/Filament/Pages/Chat.php
+class Chat extends Page
+{
+    protected static ?string $slug = 'chat';
+
+    public function sendMessage(): void {} // delegate to components.chat.new, or omit and let the component handle it directly
+}
+```
+
+```php
+// app/Filament/Pages/ChatHistory.php
+class ChatHistory extends Page
+{
+    protected static ?string $slug = 'chat/history';
+}
+```
+
+```php
+// app/Filament/Pages/ChatConversation.php
+class ChatConversation extends Page
+{
+    protected static ?string $slug = 'chat/{conversationId}';
+
+    public ?Conversation $conversation = null;
+
+    public ?string $initialMessage = null;
+
+    public function mount(string $conversationId): void
+    {
+        $this->conversation = Conversation::findOrFail($conversationId);
+    }
+}
+```
+
+`Chat` and `ChatHistory`'s views listen for the two navigation events and redirect to
+`ChatConversation`'s URL instead of swapping a property, mirroring the plain-route
+example above:
+
+```php
+#[On('ai-chat-ui-conversation-started')]
+public function onConversationStarted(string $conversationId, string $message): void
+{
+    session()->flash('chat.initial_message', $message);
+
+    $this->redirect(ChatConversation::getUrl(['conversationId' => $conversationId]));
+}
+
+#[On('ai-chat-ui-conversation-selected')]
+public function onConversationSelected(string $conversationId): void
+{
+    $this->redirect(ChatConversation::getUrl(['conversationId' => $conversationId]));
+}
+```
+
+```php
+// resources/views/filament/pages/chat-conversation.blade.php
+<x-filament-panels::page>
+    <livewire:ai-chat-ui::components.chat.conversation
+        :conversation="$conversation"
+        :initial-message="$initialMessage ?? session()->pull('chat.initial_message')"
+        :show-header="false"
+        container-class=""
+    />
+</x-filament-panels::page>
+```
+
+`showHeader="false"` and an empty `containerClass` hand the page's own heading and width
+constraints back to Filament's page chrome, instead of the component rendering its own
+on top of them (see "Presentation props" above).
 
 ## The JSON tree viewer
 
@@ -267,6 +393,19 @@ with the right agent, e.g. by
 giving each bot its own URL prefix (`/support/chat/{conversation}` vs
 `/sales/chat/{conversation}`) the way the two pages above illustrate, rather than one
 shared `chat.conversation` route used for every bot.
+
+### A `{conversation}` route segment and implicit binding
+
+Naming a route parameter `conversation` (as in the examples above) triggers Laravel's
+*implicit* route-model binding for `Laravel\Ai\Models\Conversation`. Livewire's own
+`<livewire:...>` tag hands back a serialized representation of a typed property as the
+binding value, and implicit binding resolves it by comparing every column rather than
+just the key — which 404s. This package registers its own explicit binding for the
+`conversation` parameter name (`Route::bind('conversation', ...)`, resolving by key
+only) specifically to route around that, so `{conversation}` segments just work. If your
+own app registers a competing `Route::bind('conversation', ...)` for something unrelated
+elsewhere, that registration wins (whichever one runs last) — rename your route segment
+in that case rather than fighting over the same parameter name.
 
 ## Trace correlation — important if you extend this package
 

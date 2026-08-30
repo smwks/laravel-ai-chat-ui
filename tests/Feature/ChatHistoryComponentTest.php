@@ -14,6 +14,59 @@ class ChatHistoryComponentTestUser extends Authenticatable
     protected $guarded = [];
 }
 
+it('hides the heading when showHeader is false', function () {
+    if (! Schema::hasTable('users')) {
+        Schema::create('users', function ($table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+    $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
+    test()->actingAs($user);
+
+    Livewire::test('ai-chat-ui::components.chat.history')
+        ->assertSee('Conversation history');
+
+    Livewire::test('ai-chat-ui::components.chat.history', ['showHeader' => false])
+        ->assertDontSee('Conversation history');
+});
+
+it('uses a custom containerClass when given', function () {
+    if (! Schema::hasTable('users')) {
+        Schema::create('users', function ($table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+    $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
+    test()->actingAs($user);
+
+    Livewire::test('ai-chat-ui::components.chat.history', ['containerClass' => 'my-custom-wrapper'])
+        ->assertSeeHtml('my-custom-wrapper')
+        ->assertDontSeeHtml('w-full p-6');
+});
+
+it('exposes data-ai-chat-ui hooks for styling', function () {
+    if (! Schema::hasTable('users')) {
+        Schema::create('users', function ($table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+    $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
+    test()->actingAs($user);
+
+    Livewire::test('ai-chat-ui::components.chat.history')
+        ->assertSeeHtml('data-ai-chat-ui="root"')
+        ->assertSeeHtml('data-ai-chat-ui="header"');
+});
+
 it('lists conversations and computes token/model stats from llm events', function () {
     Schema::create('users', function ($table) {
         $table->id();

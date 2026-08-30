@@ -1,9 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
+use Laravel\Ai\Models\ConversationMessage;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
@@ -34,6 +36,30 @@ new class extends Component {
      */
     public bool $showIds = true;
 
+    /**
+     * Whether the component renders its own <h1> + conversation id header.
+     * Turn off when the host page already renders its own page title.
+     */
+    public bool $showHeader = true;
+
+    /**
+     * Classes for the component's root element. Defaults to a sensible
+     * standalone layout (centered, max width, padding); pass an empty
+     * string — or your own classes — when the host page already
+     * constrains width/padding, e.g. a Filament panel page.
+     */
+    public ?string $containerClass = null;
+
+    /**
+     * Opt-in: makes the message thread its own scroll container (filling
+     * whatever height the host gives it) with the composer pinned below it,
+     * instead of the default unbounded layout that relies on an ancestor to
+     * scroll. Only turn this on when the host actually hands the component a
+     * bounded height — otherwise the thread has nothing to fill and won't
+     * scroll internally at all.
+     */
+    public bool $fillHeight = false;
+
     public string $message = '';
 
     public string $pendingUserMessage = '';
@@ -45,6 +71,13 @@ new class extends Component {
     public ?string $selectedEventId = null;
 
     public bool $showEventDetails = false;
+
+    /**
+     * z-index for the trace details slide-over panel. The panel is
+     * x-teleport="body"'d to the end of <body>, so raise this when a host
+     * app's own modal/toast layer (e.g. Filament's) sits above the default.
+     */
+    public int $detailsZIndex = 50;
 
     public function mount(Conversation $conversation, ?string $initialMessage = null): void
     {
@@ -125,6 +158,20 @@ new class extends Component {
     {
         return $this->showThoughts
             && Gate::forUser(Auth::user())->allows('viewThoughts', $this->conversation);
+    }
+
+    /**
+     * A message's content is immutable once written, so its rendered Markdown
+     * is cached forever by message id — without this, every message in the
+     * thread gets re-parsed on every re-render (e.g. each wire:poll tick
+     * while streaming), even though only the newest message actually changed.
+     */
+    public function renderedMarkdown(ConversationMessage $message): string
+    {
+        return Cache::rememberForever(
+            "ai-chat-ui.rendered-markdown.{$message->id}",
+            fn () => Str::markdown($message->content, ['html_input' => 'strip', 'allow_unsafe_links' => false])
+        );
     }
 
     public function checkTurnStatus(): void
@@ -382,22 +429,32 @@ new class extends Component {
         <div wire:poll.1000ms="checkTurnStatus"></div>
     @endif
 
-    <div class="mx-auto flex max-w-3xl flex-col p-6">
-        <div class="mb-4">
-            <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
-            @if ($showIds)
-                @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
-            @endif
-        </div>
+    <div
+        class="{{ $containerClass ?? ($fillHeight ? 'mx-auto flex h-full max-w-3xl flex-col p-6' : 'mx-auto flex max-w-3xl flex-col p-6') }}"
+        data-ai-chat-ui="root"
+    >
+        @if ($showHeader)
+            <div class="mb-4" data-ai-chat-ui="header">
+                <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
+                @if ($showIds)
+                    @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
+                @endif
+            </div>
+        @endif
 
-        {{-- No fixed height or overflow-y-auto here on purpose: this component doesn't own the
-             viewport, so it can't assume it's safe to scroll internally. A host embedding it inside
-             its own already-scrollable region (e.g. a Filament page) would otherwise end up with
-             two nested scrollbars fighting over the same content. Whatever ancestor scrolls (the
-             page itself, or a host-provided container) is the only scrollbar. --}}
-        <div class="space-y-4" id="message-thread">
+        {{-- No fixed height or overflow-y-auto by default on purpose: this component doesn't own
+             the viewport, so it can't assume it's safe to scroll internally. A host embedding it
+             inside its own already-scrollable region (e.g. a Filament page) would otherwise end up
+             with two nested scrollbars fighting over the same content. Whatever ancestor scrolls
+             (the page itself, or a host-provided container) is the only scrollbar — unless
+             fillHeight is on, which opts into owning its own scroll because the host has explicitly
+             handed this component a bounded box to fill. --}}
+        <div
+            class="{{ $fillHeight ? 'min-h-0 flex-1 space-y-4 overflow-y-auto' : 'space-y-4' }}"
+            data-ai-chat-ui="thread"
+        >
             @foreach ($this->messages as $msg)
-                <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2">
+                <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2" data-ai-chat-ui="message" data-ai-chat-ui-role="{{ $msg->role }}">
                     @if ($msg->role === 'user')
                         <div
                             class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
@@ -408,13 +465,13 @@ new class extends Component {
 
                         @if ($this->canViewThoughts() && $turnEvents->isNotEmpty())
                             <div x-data="{ open: false }" class="max-w-md">
-                                <button type="button" @click="open = !open"
+                                <button type="button" @click="open = !open" data-ai-chat-ui="thoughts-toggle"
                                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                     <span x-text="open ? '▾ hide thoughts' : '▸ show thoughts'"></span>
                                 </button>
                                 <div x-show="open" x-cloak class="mt-2 space-y-2">
                                     @foreach ($turnEvents as $event)
-                                        <div wire:key="event-{{ $event->id }}"
+                                        <div wire:key="event-{{ $event->id }}" data-ai-chat-ui="thought-event"
                                              class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
                                             <div class="flex items-center gap-2">
                                                 <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
@@ -434,8 +491,8 @@ new class extends Component {
                             </div>
                         @endif
 
-                        <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700">
-                            {!! Str::markdown($msg->content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                        <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-chat-ui="reply-body">
+                            {!! $this->renderedMarkdown($msg) !!}
                         </div>
                     @endif
                 </div>
@@ -443,7 +500,9 @@ new class extends Component {
 
             @if ($pendingUserMessage)
                 <div
-                    class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white opacity-60 dark:bg-zinc-100 dark:text-zinc-900">
+                    class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+                    data-ai-chat-ui="message" data-ai-chat-ui-role="user"
+                >
                     {{ $pendingUserMessage }}
                 </div>
             @endif
@@ -451,14 +510,14 @@ new class extends Component {
             @if ($streaming)
                 @if ($this->canViewThoughts())
                     <div x-data="{ open: false }" class="max-w-md">
-                        <button type="button" @click="open = !open"
+                        <button type="button" @click="open = !open" data-ai-chat-ui="thoughts-toggle"
                                 class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                             <span x-show="!open" class="animate-pulse">▸ {{ $this->currentStatus }}</span>
                             <span x-show="open" x-cloak>▾ hide thoughts</span>
                         </button>
                         <div x-show="open" x-cloak class="mt-2 space-y-2">
                             @foreach ($this->visibleStreamingEvents() as $event)
-                                <div wire:key="stream-event-{{ $event->id }}"
+                                <div wire:key="stream-event-{{ $event->id }}" data-ai-chat-ui="thought-event"
                                      class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
                                     <div class="flex items-center gap-2">
                                         <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
@@ -484,14 +543,17 @@ new class extends Component {
             @endif
         </div>
 
-        <form wire:submit="sendMessage" class="mt-4 flex gap-2">
-            <input
+        <form wire:submit="sendMessage" class="mt-4 flex gap-2" data-ai-chat-ui="composer">
+            <textarea
                 wire:model="message"
-                type="text"
+                rows="1"
                 placeholder="Type a message..."
                 @disabled($streaming)
-                class="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            >
+                x-data
+                x-on:input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
+                @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.sendMessage() }"
+                class="max-h-40 flex-1 resize-none overflow-y-auto rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            ></textarea>
             <button type="submit"
                     @disabled($streaming) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
                 Send
@@ -500,10 +562,12 @@ new class extends Component {
     </div>
 
     <div
+        x-teleport="body"
         x-show="$wire.showEventDetails"
         x-cloak
         x-transition.opacity.duration.200ms
-        class="fixed inset-0 z-50 flex justify-end bg-black/30"
+        class="fixed inset-0 flex justify-end bg-black/30"
+        style="z-index: {{ $detailsZIndex }}"
         @keydown.escape.window="$wire.closeDetails()"
     >
         <div
@@ -532,12 +596,16 @@ new class extends Component {
     @assets
         <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
         <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="{{ asset('vendor/ai-chat-ui/reply-body.css') }}" crossorigin="anonymous">
     @endassets
 
     @script
         <script>
+            // $el is this component's own root element — scoped per instance, unlike a
+            // global id, so two chat.conversation components on one page each scroll
+            // their own thread rather than fighting over the same #message-thread.
             function scrollAiChatUiThreadToBottom() {
-                const thread = document.getElementById('message-thread');
+                const thread = $el.querySelector('[data-ai-chat-ui="thread"]');
                 if (thread) thread.scrollTop = thread.scrollHeight;
             }
 

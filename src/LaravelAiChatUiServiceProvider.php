@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\Events\AgentPrompted;
 use Laravel\Ai\Events\InvokingTool;
@@ -55,6 +56,7 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../resources/js/json-viewer.min.js' => public_path('vendor/ai-chat-ui/json-viewer.min.js'),
             __DIR__.'/../resources/js/json-tree-search.js' => public_path('vendor/ai-chat-ui/json-tree-search.js'),
+            __DIR__.'/../resources/css/reply-body.css' => public_path('vendor/ai-chat-ui/reply-body.css'),
         ], 'ai-chat-ui-assets');
 
         $this->publishes([
@@ -72,6 +74,16 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
             Conversation::class,
             ConversationPolicy::class
         );
+
+        // Laravel's implicit route-model binding matches a {conversation} segment name
+        // to the Conversation class, then hands Livewire's serialized property value
+        // back as the binding value — resolveRouteBinding() ends up querying by every
+        // column instead of just the key, and 404s. Binding the parameter name
+        // explicitly (by key only) sidesteps that regardless of which property
+        // triggered the (re)bind. A host app that registers its own explicit binding
+        // for "conversation" later (e.g. in routes/web.php) overrides this one, since
+        // Route::bind() for the same name simply replaces the prior resolver.
+        Route::bind('conversation', fn (string $value) => Conversation::findOrFail($value));
 
         if ($this->app->runningInConsole()) {
             $this->commands([
