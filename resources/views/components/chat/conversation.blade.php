@@ -50,6 +50,16 @@ new class extends Component {
      */
     public ?string $containerClass = null;
 
+    /**
+     * Opt-in: makes the message thread its own scroll container (filling
+     * whatever height the host gives it) with the composer pinned below it,
+     * instead of the default unbounded layout that relies on an ancestor to
+     * scroll. Only turn this on when the host actually hands the component a
+     * bounded height — otherwise the thread has nothing to fill and won't
+     * scroll internally at all.
+     */
+    public bool $fillHeight = false;
+
     public string $message = '';
 
     public string $pendingUserMessage = '';
@@ -412,7 +422,10 @@ new class extends Component {
         <div wire:poll.1000ms="checkTurnStatus"></div>
     @endif
 
-    <div class="{{ $containerClass ?? 'mx-auto flex max-w-3xl flex-col p-6' }}" data-ai-chat-ui="root">
+    <div
+        class="{{ $containerClass ?? ($fillHeight ? 'mx-auto flex h-full max-w-3xl flex-col p-6' : 'mx-auto flex max-w-3xl flex-col p-6') }}"
+        data-ai-chat-ui="root"
+    >
         @if ($showHeader)
             <div class="mb-4" data-ai-chat-ui="header">
                 <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
@@ -422,12 +435,17 @@ new class extends Component {
             </div>
         @endif
 
-        {{-- No fixed height or overflow-y-auto here on purpose: this component doesn't own the
-             viewport, so it can't assume it's safe to scroll internally. A host embedding it inside
-             its own already-scrollable region (e.g. a Filament page) would otherwise end up with
-             two nested scrollbars fighting over the same content. Whatever ancestor scrolls (the
-             page itself, or a host-provided container) is the only scrollbar. --}}
-        <div class="space-y-4" id="message-thread" data-ai-chat-ui="thread">
+        {{-- No fixed height or overflow-y-auto by default on purpose: this component doesn't own
+             the viewport, so it can't assume it's safe to scroll internally. A host embedding it
+             inside its own already-scrollable region (e.g. a Filament page) would otherwise end up
+             with two nested scrollbars fighting over the same content. Whatever ancestor scrolls
+             (the page itself, or a host-provided container) is the only scrollbar — unless
+             fillHeight is on, which opts into owning its own scroll because the host has explicitly
+             handed this component a bounded box to fill. --}}
+        <div
+            class="{{ $fillHeight ? 'min-h-0 flex-1 space-y-4 overflow-y-auto' : 'space-y-4' }}"
+            data-ai-chat-ui="thread"
+        >
             @foreach ($this->messages as $msg)
                 <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2" data-ai-chat-ui="message" data-ai-chat-ui-role="{{ $msg->role }}">
                     @if ($msg->role === 'user')
@@ -571,8 +589,11 @@ new class extends Component {
 
     @script
         <script>
+            // $el is this component's own root element — scoped per instance, unlike a
+            // global id, so two chat.conversation components on one page each scroll
+            // their own thread rather than fighting over the same #message-thread.
             function scrollAiChatUiThreadToBottom() {
-                const thread = document.getElementById('message-thread');
+                const thread = $el.querySelector('[data-ai-chat-ui="thread"]');
                 if (thread) thread.scrollTop = thread.scrollHeight;
             }
 

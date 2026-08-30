@@ -999,3 +999,24 @@ it('uses a custom containerClass when given', function () {
         ->assertSeeHtml('my-custom-wrapper')
         ->assertDontSeeHtml('max-w-3xl');
 });
+
+it('does not make the thread its own scroll container by default', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->not->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
+    expect($html)->not->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
+});
+
+it('makes the thread scroll and pins the composer when fillHeight is true', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'fillHeight' => true,
+    ])->html();
+
+    expect($html)->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
+    expect($html)->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
+});
