@@ -72,6 +72,13 @@ new class extends Component {
 
     public bool $showEventDetails = false;
 
+    /**
+     * z-index for the trace details slide-over panel. The panel is
+     * x-teleport="body"'d to the end of <body>, so raise this when a host
+     * app's own modal/toast layer (e.g. Filament's) sits above the default.
+     */
+    public int $detailsZIndex = 50;
+
     public function mount(Conversation $conversation, ?string $initialMessage = null): void
     {
         abort_unless(
@@ -555,10 +562,12 @@ new class extends Component {
     </div>
 
     <div
+        x-teleport="body"
         x-show="$wire.showEventDetails"
         x-cloak
         x-transition.opacity.duration.200ms
-        class="fixed inset-0 z-50 flex justify-end bg-black/30"
+        class="fixed inset-0 flex justify-end bg-black/30"
+        style="z-index: {{ $detailsZIndex }}"
         @keydown.escape.window="$wire.closeDetails()"
     >
         <div

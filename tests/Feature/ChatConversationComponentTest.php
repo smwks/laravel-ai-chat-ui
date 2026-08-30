@@ -1021,6 +1021,26 @@ it('makes the thread scroll and pins the composer when fillHeight is true', func
     expect($html)->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
 });
 
+it('teleports the details panel to body with a default z-index of 50', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+
+    expect($html)->toContain('x-teleport="body"');
+    expect($html)->toContain('style="z-index: 50"');
+});
+
+it('uses a custom detailsZIndex when given', function () {
+    [, $conversation] = makeConversationFixture();
+
+    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+        'conversation' => $conversation,
+        'detailsZIndex' => 9999,
+    ])->html();
+
+    expect($html)->toContain('style="z-index: 9999"');
+});
+
 it('renders an auto-growing textarea composer wired to send on Enter, not Shift+Enter', function () {
     [, $conversation] = makeConversationFixture();
 
