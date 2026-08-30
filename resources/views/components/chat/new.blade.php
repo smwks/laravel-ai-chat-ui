@@ -39,12 +39,12 @@ new class extends Component
     }
 }; ?>
 
-<div class="{{ $containerClass ?? 'mx-auto flex w-full max-w-2xl flex-col gap-6 py-16' }}">
+<div class="{{ $containerClass ?? 'mx-auto flex w-full max-w-2xl flex-col gap-6 py-16' }}" data-ai-chat-ui="root">
     @if ($showHeader)
-        <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">New conversation</h1>
+        <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100" data-ai-chat-ui="header">New conversation</h1>
     @endif
 
-    <form wire:submit="sendMessage" class="flex flex-col gap-4">
+    <form wire:submit="sendMessage" class="flex flex-col gap-4" data-ai-chat-ui="composer">
         <textarea
             wire:model="message"
             rows="6"

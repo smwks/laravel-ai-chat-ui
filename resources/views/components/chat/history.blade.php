@@ -74,9 +74,9 @@ new class extends Component
     }
 }; ?>
 
-<div class="{{ $containerClass ?? 'w-full p-6' }}">
+<div class="{{ $containerClass ?? 'w-full p-6' }}" data-ai-chat-ui="root">
     @if ($showHeader)
-        <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Conversation history</h1>
+        <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100" data-ai-chat-ui="header">Conversation history</h1>
     @endif
 
     <input

@@ -55,6 +55,15 @@ it('uses a custom containerClass when given', function () {
         ->assertDontSeeHtml('max-w-2xl');
 });
 
+it('exposes data-ai-chat-ui hooks for styling', function () {
+    actingAsChatUser();
+
+    Livewire::test('ai-chat-ui::components.chat.new')
+        ->assertSeeHtml('data-ai-chat-ui="root"')
+        ->assertSeeHtml('data-ai-chat-ui="header"')
+        ->assertSeeHtml('data-ai-chat-ui="composer"');
+});
+
 it('creates a conversation and dispatches ai-chat-ui-conversation-started', function () {
     $user = actingAsChatUser();
 

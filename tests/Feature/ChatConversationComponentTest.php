@@ -787,6 +787,40 @@ it('shows the show-thoughts disclosure by default for a completed turn', functio
         ->assertSee('show thoughts');
 });
 
+it('exposes data-ai-chat-ui hooks for styling', function () {
+    [$user, $conversation] = makeConversationFixture();
+
+    EchoAgent::fake(['Echo: hi']);
+
+    $turn = ConversationTurn::create([
+        'conversation_id' => $conversation->id,
+        'participant_type' => $user::class,
+        'participant_id' => $user->id,
+        'status' => ConversationTurnStatus::Pending,
+    ]);
+
+    (new ProcessChatMessage($turn, 'hi', EchoAgent::class))->handle();
+
+    ConversationEvent::create([
+        'conversation_id' => $conversation->id,
+        'turn_id' => $turn->id,
+        'event_type' => 'llm.request',
+        'payload' => ['prompt' => 'hi'],
+    ]);
+
+    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSeeHtml('data-ai-chat-ui="root"')
+        ->assertSeeHtml('data-ai-chat-ui="header"')
+        ->assertSeeHtml('data-ai-chat-ui="thread"')
+        ->assertSeeHtml('data-ai-chat-ui="composer"')
+        ->assertSeeHtml('data-ai-chat-ui="message"')
+        ->assertSeeHtml('data-ai-chat-ui-role="user"')
+        ->assertSeeHtml('data-ai-chat-ui-role="assistant"')
+        ->assertSeeHtml('data-ai-chat-ui="reply-body"')
+        ->assertSeeHtml('data-ai-chat-ui="thoughts-toggle"')
+        ->assertSeeHtml('data-ai-chat-ui="thought-event"');
+});
+
 it('hides the show-thoughts disclosure when the showThoughts prop is false', function () {
     [$user, $conversation] = makeConversationFixture();
 
