@@ -259,9 +259,10 @@ overrides the config default for that conversation:
 />
 ```
 
-This package doesn't persist which agent a conversation belongs to — it has no
-tables of its own (see "Prerequisite"). So resuming a conversation correctly depends
-on your own routing consistently pairing a conversation with the right agent, e.g. by
+This package doesn't persist which agent a conversation belongs to — neither of its own
+tables (see "Why this package needs its own tables") has a column for it. So resuming a
+conversation correctly depends on your own routing consistently pairing a conversation
+with the right agent, e.g. by
 giving each bot its own URL prefix (`/support/chat/{conversation}` vs
 `/sales/chat/{conversation}`) the way the two pages above illustrate, rather than one
 shared `chat.conversation` route used for every bot.
@@ -336,3 +337,34 @@ vendor/bin/pest
 ## License
 
 MIT — see [LICENSE.md](LICENSE.md).
+
+## Why this package needs its own tables
+
+`laravel/ai`'s `agent_conversations` / `agent_conversation_messages` tables model a
+conversation as a sequence of *finished* messages — a row appears only once the agent has
+actually replied. That's sufficient for `laravel/ai` itself, but not for a chat UI that
+has to render *while* a reply is still being generated in a queued job.
+
+**`agent_conversation_events`** is the obvious one: `laravel/ai` has nowhere to put trace
+data at all. LLM requests/responses, tool invocations, and raw HTTP exchanges are the
+entire data source behind the "show thoughts" panel, and none of it overlaps with
+anything `laravel/ai` stores.
+
+**`agent_conversation_turns`** is less obvious, since on the surface it looks like it
+duplicates `agent_conversation_messages`. One row is created *before* the agent runs, and
+it exists to answer questions the messages table structurally can't:
+
+- **Is this message still being processed?** Sending a message dispatches
+  `ProcessChatMessage` to a queue and returns immediately — the request that showed the
+  "thinking" indicator has already ended. Nothing durable would otherwise exist for the
+  next poll to check, since no assistant message row exists yet to look at.
+- **What failed, if the queue worker died?** If the job throws, `agent_conversation_messages`
+  gets no row and no error — a turn's `status` (`Pending` → `Processing` → `Complete` or
+  `Failed`) is the only place that failure is ever recorded.
+- **Which trace events belong to which reply?** Every `agent_conversation_events` row is
+  tagged with a `turn_id`. `laravel/ai`'s own timeline has no equivalent of "the
+  interaction that produced this one reply," so without a turn to key on, the trace
+  inspector's per-message "show thoughts" toggle would have nothing to group by.
+- **Resuming after a page reload mid-reply.** On mount, `chat.conversation` looks up the
+  conversation's most recent non-final turn to decide whether it should still be polling
+  — there's no other row it could look up to reconstruct that state.
