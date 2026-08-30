@@ -268,6 +268,19 @@ giving each bot its own URL prefix (`/support/chat/{conversation}` vs
 `/sales/chat/{conversation}`) the way the two pages above illustrate, rather than one
 shared `chat.conversation` route used for every bot.
 
+### A `{conversation}` route segment and implicit binding
+
+Naming a route parameter `conversation` (as in the examples above) triggers Laravel's
+*implicit* route-model binding for `Laravel\Ai\Models\Conversation`. Livewire's own
+`<livewire:...>` tag hands back a serialized representation of a typed property as the
+binding value, and implicit binding resolves it by comparing every column rather than
+just the key — which 404s. This package registers its own explicit binding for the
+`conversation` parameter name (`Route::bind('conversation', ...)`, resolving by key
+only) specifically to route around that, so `{conversation}` segments just work. If your
+own app registers a competing `Route::bind('conversation', ...)` for something unrelated
+elsewhere, that registration wins (whichever one runs last) — rename your route segment
+in that case rather than fighting over the same parameter name.
+
 ## Trace correlation — important if you extend this package
 
 Which conversation/turn is "in flight" is tracked via Laravel's `Context` facade, not
