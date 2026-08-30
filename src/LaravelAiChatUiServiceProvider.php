@@ -48,8 +48,8 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
         ], 'ai-chat-ui-config');
 
         $this->publishes([
-            __DIR__.'/../database/migrations/2026_08_23_000001_create_ai_chat_ui_turns_table.php' => database_path('migrations/2026_08_23_000001_create_ai_chat_ui_turns_table.php'),
-            __DIR__.'/../database/migrations/2026_08_23_000002_create_ai_chat_ui_events_table.php' => database_path('migrations/2026_08_23_000002_create_ai_chat_ui_events_table.php'),
+            __DIR__.'/../database/migrations/2026_08_23_000001_create_agent_conversation_turns_table.php' => database_path('migrations/2026_08_23_000001_create_agent_conversation_turns_table.php'),
+            __DIR__.'/../database/migrations/2026_08_23_000002_create_agent_conversation_events_table.php' => database_path('migrations/2026_08_23_000002_create_agent_conversation_events_table.php'),
         ], 'ai-chat-ui-migrations');
 
         $this->publishes([

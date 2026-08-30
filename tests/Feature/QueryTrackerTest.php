@@ -30,8 +30,8 @@ it('excludes queries against this package\'s own logging tables', function () {
     $tracker = app(QueryTracker::class);
 
     $tracker->startTracking();
-    DB::select('select * from ai_chat_ui_events where id = ?', ['1']);
-    DB::select('select * from ai_chat_ui_turns where id = ?', ['1']);
+    DB::select('select * from agent_conversation_events where id = ?', ['1']);
+    DB::select('select * from agent_conversation_turns where id = ?', ['1']);
     DB::select('select 1'); // an unrelated query — must still be captured
     $queries = $tracker->stopTracking();
 

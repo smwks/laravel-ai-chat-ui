@@ -5,8 +5,8 @@ use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
 return [
 
     'tables' => [
-        'turns' => 'ai_chat_ui_turns',
-        'events' => 'ai_chat_ui_events',
+        'turns' => 'agent_conversation_turns',
+        'events' => 'agent_conversation_events',
     ],
 
     'agent' => EchoAgent::class,

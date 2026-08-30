@@ -29,6 +29,6 @@ class ConversationEvent extends Model
 
     public function getTable(): string
     {
-        return config('ai-chat-ui.tables.events', 'ai_chat_ui_events');
+        return config('ai-chat-ui.tables.events', 'agent_conversation_events');
     }
 }

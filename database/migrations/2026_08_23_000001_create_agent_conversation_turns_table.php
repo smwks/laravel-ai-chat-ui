@@ -8,13 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('ai-chat-ui.tables.events', 'ai_chat_ui_events'), function (Blueprint $table) {
+        Schema::create(config('ai-chat-ui.tables.turns', 'agent_conversation_turns'), function (Blueprint $table) {
             $table->string('id', 36)->primary();
             $table->string('conversation_id', 36)->index();
-            $table->string('turn_id', 36)->nullable()->index();
-            $table->string('event_type');
-            $table->json('payload')->nullable();
-            $table->timestamp('created_at')->nullable();
+            $table->string('participant_type')->nullable();
+            $table->unsignedBigInteger('participant_id')->nullable();
+            $table->string('status')->default('PENDING');
+            $table->timestamps();
 
             $table->index(['conversation_id', 'created_at']);
         });
@@ -22,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists(config('ai-chat-ui.tables.events', 'ai_chat_ui_events'));
+        Schema::dropIfExists(config('ai-chat-ui.tables.turns', 'agent_conversation_turns'));
     }
 };

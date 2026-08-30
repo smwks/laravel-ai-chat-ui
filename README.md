@@ -44,8 +44,10 @@ page chrome. Drop them into pages your own app already owns — or straight into
 ## Prerequisite
 
 This package does not store conversations or messages itself — it builds entirely on
-`laravel/ai`'s own `agent_conversations` / `agent_conversation_messages` tables. Publish
-and run `laravel/ai`'s migrations first:
+`laravel/ai`'s own `agent_conversations` / `agent_conversation_messages` tables. Its own
+two tables, `agent_conversation_turns` and `agent_conversation_events`, follow that same
+naming so they read as companions rather than a separate schema. Publish and run
+`laravel/ai`'s migrations first:
 
 ```bash
 php artisan vendor:publish --provider="Laravel\Ai\AiServiceProvider"
