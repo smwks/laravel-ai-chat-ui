@@ -1,7 +1,13 @@
 <?php
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Event;
+use Laravel\Ai\Approvals\PendingApproval;
+use Laravel\Ai\Events\ToolApprovalRequested;
+use Laravel\Ai\Events\ToolApprovalResolved;
 use Laravel\Ai\Responses\Data\ToolCall;
+use Laravel\Ai\Responses\Data\ToolResult;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
 use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
 use Smwks\LaravelAiChatUi\Testbench\EchoStatusToolAgent;
@@ -104,4 +110,55 @@ it('correlates tool.invoking and tool.invoked via the same tool_invocation_id', 
     $invoked = ConversationEvent::where('event_type', 'tool.invoked')->first();
 
     expect($invoking->payload['tool_invocation_id'])->toBe($invoked->payload['tool_invocation_id']);
+});
+
+it('captures tool.approval_requested with each pending call when context holds a conversation id', function () {
+    Context::add('ai-chat-ui.conversation_id', 'conv-approval');
+    Context::add('ai-chat-ui.turn_id', 'turn-approval');
+
+    Event::dispatch(new ToolApprovalRequested(
+        'inv-1',
+        new EchoToolAgent,
+        Collection::make([new PendingApproval('call-1', 'NoopTool', ['value' => 'x'], 'Confirm this.')]),
+        'conv-approval',
+    ));
+
+    $event = ConversationEvent::where('event_type', 'tool.approval_requested')->first();
+
+    expect($event)->not->toBeNull()
+        ->and($event->conversation_id)->toBe('conv-approval')
+        ->and($event->turn_id)->toBe('turn-approval')
+        ->and($event->payload['approvals'][0])->toMatchArray([
+            'id' => 'call-1',
+            'tool' => 'NoopTool',
+            'reason' => 'Confirm this.',
+        ]);
+});
+
+it('captures tool.approval_resolved with the resolved results', function () {
+    Context::add('ai-chat-ui.conversation_id', 'conv-resolved');
+
+    Event::dispatch(new ToolApprovalResolved(
+        'inv-1',
+        new EchoToolAgent,
+        Collection::make([
+            new ToolResult('call-1', 'NoopTool', ['value' => 'x'], 'noop-result'),
+            new ToolResult('call-2', 'NoopTool', ['value' => 'y'], null, denied: true),
+        ]),
+        'conv-resolved',
+    ));
+
+    $event = ConversationEvent::where('event_type', 'tool.approval_resolved')->first();
+
+    expect($event->payload['results'])->toHaveCount(2)
+        ->and($event->payload['results'][0]['denied'])->toBeFalse()
+        ->and($event->payload['results'][1]['denied'])->toBeTrue();
+});
+
+it('writes nothing for approval events when context has no conversation id', function () {
+    Event::dispatch(new ToolApprovalRequested('inv-1', new EchoToolAgent, Collection::make([
+        new PendingApproval('call-1', 'NoopTool', [], null),
+    ])));
+
+    expect(ConversationEvent::count())->toBe(0);
 });

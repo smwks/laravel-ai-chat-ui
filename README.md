@@ -30,6 +30,9 @@ page chrome. Drop them into pages your own app already owns — or straight into
   agent per conversation for a site running several distinct bots.
 - **Policy-gated by default** — the trace inspector is guarded by a `viewThoughts` ability you
   can override, in addition to a component-level `showThoughts` prop.
+- **Human tool approval** — a tool that requires approval pauses the run and renders an
+  inline Approve / Reject prompt (with its arguments and reason) in the thread; resolving
+  it resumes the same turn. See "Human tool approval" below.
 - **Extensible** — give any tool its own detail view or "thinking…" status message without
   forking or publishing anything.
 - **Themeable without forking views** — every structural element carries a stable
@@ -407,6 +410,50 @@ own app registers a competing `Route::bind('conversation', ...)` for something u
 elsewhere, that registration wins (whichever one runs last) — rename your route segment
 in that case rather than fighting over the same parameter name.
 
+## Human tool approval
+
+`laravel/ai` lets a tool require a human decision before it runs. Mark one by
+implementing `Approvable` and using the `InteractsWithApprovals` concern, then calling
+`requireApproval()`:
+
+```php
+use Laravel\Ai\Concerns\InteractsWithApprovals;
+use Laravel\Ai\Contracts\Approvable;
+use Laravel\Ai\Contracts\Tool;
+
+class UpdateMeetingTool implements Approvable, Tool
+{
+    use InteractsWithApprovals;
+
+    public function __construct()
+    {
+        $this->requireApproval('This changes a meeting record.');
+    }
+
+    // ...description(), handle(), schema()
+}
+```
+
+When the agent calls that tool, the run **pauses** instead of executing it. The turn ends
+in an `AWAITING_APPROVAL` state (rather than `COMPLETE`), and `components.chat.conversation`
+renders an inline prompt beneath the assistant message — the tool name, the reason, and the
+arguments the model wants to pass — with **Approve** and **Reject** buttons. When a single
+turn pauses on more than one call, **Approve all** / **Reject all** are offered too, and a
+mixed set is submitted once every call has a decision. The composer is disabled until the
+pause is resolved.
+
+Resolving dispatches a fresh turn that resumes the paused one: approved calls run and the
+agent continues; rejected calls are reported back to the model as denied so it can carry on
+without them. Nothing extra is persisted — this builds entirely on `laravel/ai`'s own
+`approval_state` column on the messages table.
+
+Resolving an approval is authorized by the same `sendMessage` policy ability as sending a
+message. Each pause and resolution is also recorded as a `tool.approval_requested` /
+`tool.approval_resolved` trace event, visible under "show thoughts".
+
+> Only approve / reject are surfaced for now. `laravel/ai`'s `Decision::edit()` — approving
+> a call with modified arguments — isn't wired to the UI yet.
+
 ## Trace correlation — important if you extend this package
 
 Which conversation/turn is "in flight" is tracked via Laravel's `Context` facade, not
@@ -465,7 +512,7 @@ identity:
   click, into the same live trace boxes the completed view shows. A tool that doesn't
   implement this interface falls back to its own `description()`.
 - Out of scope in this release: entity typeahead, Markdown export, an SSE/JSON API,
-  human tool-approval UI, broadcasting, and per-conversation rating/notes.
+  broadcasting, and per-conversation rating/notes.
 
 ## Testing
 
