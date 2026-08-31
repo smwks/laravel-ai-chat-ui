@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Laravel\Ai\Approvals\Decisions;
 use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Livewire\Attributes\Computed;
@@ -79,6 +80,15 @@ new class extends Component {
      */
     public int $detailsZIndex = 50;
 
+    /**
+     * Tool-call id => approve (true) / reject (false), accumulated as the user
+     * decides each pending call. Submitted once every pending call in the turn
+     * has a decision (see resolveApprovals()).
+     *
+     * @var array<string, bool>
+     */
+    public array $approvalDecisions = [];
+
     public function mount(Conversation $conversation, ?string $initialMessage = null): void
     {
         abort_unless(
@@ -116,7 +126,7 @@ new class extends Component {
 
     public function sendMessage(): void
     {
-        if ($this->streaming) {
+        if ($this->streaming || $this->pendingApprovals !== null) {
             return;
         }
 
@@ -154,6 +164,134 @@ new class extends Component {
         return $this->agent ?? config('ai-chat-ui.agent');
     }
 
+    /**
+     * The tool calls from the most recent paused turn that still need a
+     * decision, or null when nothing is awaiting approval. Each entry is
+     * ['id', 'tool', 'arguments', 'reason']; 'messageId' is the paused
+     * assistant row the prompt renders beneath.
+     *
+     * @return array{messageId: string, calls: array<int, array{id: string, tool: string, arguments: array<string, mixed>, reason: ?string}>}|null
+     */
+    #[Computed]
+    public function pendingApprovals(): ?array
+    {
+        $paused = $this->messages
+            ->where('role', 'assistant')
+            ->filter(fn (ConversationMessage $message) => filled($message->approval_state['pending'] ?? null))
+            ->last();
+
+        if (! $paused) {
+            return null;
+        }
+
+        // A call answered on any later row means that pause is already resolved.
+        $resolvedIds = $this->messages
+            ->flatMap(fn (ConversationMessage $message) => collect($message->tool_results ?? [])->pluck('id'))
+            ->filter()
+            ->all();
+
+        $unresolved = array_values(array_diff(
+            array_keys($paused->approval_state['pending']),
+            $resolvedIds,
+        ));
+
+        if ($unresolved === []) {
+            return null;
+        }
+
+        $callsById = collect($paused->tool_calls ?? [])->keyBy('id');
+
+        return [
+            'messageId' => $paused->id,
+            'calls' => collect($unresolved)->map(fn (string $id) => [
+                'id' => $id,
+                'tool' => $callsById[$id]['name'] ?? 'tool',
+                'arguments' => $callsById[$id]['arguments'] ?? [],
+                'reason' => $paused->approval_state['pending'][$id] ?: null,
+            ])->all(),
+        ];
+    }
+
+    public function approvePendingCall(string $callId): void
+    {
+        $this->approvalDecisions[$callId] = true;
+
+        $this->resolveApprovals();
+    }
+
+    public function rejectPendingCall(string $callId): void
+    {
+        $this->approvalDecisions[$callId] = false;
+
+        $this->resolveApprovals();
+    }
+
+    public function approveAllPending(): void
+    {
+        foreach ($this->pendingApprovals['calls'] ?? [] as $call) {
+            $this->approvalDecisions[$call['id']] = true;
+        }
+
+        $this->resolveApprovals();
+    }
+
+    public function rejectAllPending(): void
+    {
+        foreach ($this->pendingApprovals['calls'] ?? [] as $call) {
+            $this->approvalDecisions[$call['id']] = false;
+        }
+
+        $this->resolveApprovals();
+    }
+
+    /**
+     * Submit the accumulated decisions once every pending call in the turn has
+     * one: settle the paused turn, start a fresh turn, and dispatch the resume.
+     */
+    protected function resolveApprovals(): void
+    {
+        if ($this->streaming) {
+            return;
+        }
+
+        abort_unless(
+            Gate::forUser(Auth::user())->allows('sendMessage', $this->conversation),
+            403
+        );
+
+        $pending = $this->pendingApprovals;
+
+        if ($pending === null) {
+            return;
+        }
+
+        $ids = collect($pending['calls'])->pluck('id')->all();
+        $decisions = array_intersect_key($this->approvalDecisions, array_flip($ids));
+
+        if (count($decisions) !== count($ids)) {
+            return;
+        }
+
+        ConversationTurn::where('conversation_id', $this->conversation->id)
+            ->where('status', ConversationTurnStatus::AwaitingApproval)
+            ->update(['status' => ConversationTurnStatus::Complete]);
+
+        $turn = ConversationTurn::create([
+            'conversation_id' => $this->conversation->id,
+            'participant_type' => Conversation::participantType(Auth::user()),
+            'participant_id' => Conversation::participantKey(Auth::user()),
+            'status' => ConversationTurnStatus::Pending,
+        ]);
+
+        $this->approvalDecisions = [];
+        $this->pendingTurnId = $turn->id;
+        $this->streaming = true;
+
+        unset($this->messages, $this->eventsByAssistantMessageId, $this->streamingEvents, $this->pendingApprovals);
+
+        ProcessChatMessage::dispatch($turn, Decisions::from($decisions), $this->resolvedAgentClass());
+    }
+
     public function canViewThoughts(): bool
     {
         return $this->showThoughts
@@ -182,11 +320,11 @@ new class extends Component {
 
         $turn = ConversationTurn::find($this->pendingTurnId);
 
-        if (!$turn || in_array($turn->status, [ConversationTurnStatus::Complete, ConversationTurnStatus::Failed], true)) {
+        if (!$turn || $turn->status->isSettled()) {
             $this->streaming = false;
             $this->pendingUserMessage = '';
             $this->pendingTurnId = null;
-            unset($this->messages, $this->eventsByAssistantMessageId, $this->streamingEvents);
+            unset($this->messages, $this->eventsByAssistantMessageId, $this->streamingEvents, $this->pendingApprovals);
         }
     }
 
@@ -341,6 +479,8 @@ new class extends Component {
             'llm.request' => 'LLM Request',
             'llm.response' => 'LLM Response',
             'tool.invoked' => 'Tool',
+            'tool.approval_requested' => 'Approval requested',
+            'tool.approval_resolved' => 'Approval resolved',
             'http.exchange' => 'HTTP',
             'error' => 'Error',
             default => $eventType,
@@ -364,6 +504,11 @@ new class extends Component {
                 isset($event->payload['url']) ? parse_url($event->payload['url'], PHP_URL_HOST) : null,
             ])) ?: null,
             'tool.invoked' => $event->payload['tool'] ?? null,
+            'tool.approval_requested' => collect($event->payload['approvals'] ?? [])->pluck('tool')->filter()->implode(', ') ?: null,
+            'tool.approval_resolved' => collect($event->payload['results'] ?? [])
+                ->map(fn ($result) => ($result['tool'] ?? '').(($result['denied'] ?? false) ? ' (rejected)' : ''))
+                ->filter()
+                ->implode(', ') ?: null,
             default => null,
         };
     }
@@ -391,6 +536,8 @@ new class extends Component {
             'llm.request' => 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20',
             'llm.response' => 'border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950/20',
             'tool.invoked' => 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20',
+            'tool.approval_requested' => 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20',
+            'tool.approval_resolved' => 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20',
             'http.exchange' => 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/20',
             'error' => 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20',
             default => 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40',
@@ -491,9 +638,55 @@ new class extends Component {
                             </div>
                         @endif
 
-                        <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-chat-ui="reply-body">
-                            {!! $this->renderedMarkdown($msg) !!}
-                        </div>
+                        @if (filled($msg->content))
+                            <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-chat-ui="reply-body">
+                                {!! $this->renderedMarkdown($msg) !!}
+                            </div>
+                        @endif
+
+                        @if (($approvals = $this->pendingApprovals) && $approvals['messageId'] === $msg->id)
+                            <div class="max-w-md space-y-2" data-ai-chat-ui="approval">
+                                @foreach ($approvals['calls'] as $call)
+                                    <div wire:key="approval-{{ $call['id'] }}" data-ai-chat-ui="approval-request"
+                                         class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/20">
+                                        <p class="font-medium text-zinc-900 dark:text-zinc-100">
+                                            Run <code class="rounded bg-white/70 px-1 text-xs dark:bg-black/30">{{ $call['tool'] }}</code>?
+                                        </p>
+                                        @if ($call['reason'])
+                                            <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{{ $call['reason'] }}</p>
+                                        @endif
+                                        @if (! empty($call['arguments']))
+                                            <pre class="mt-2 overflow-x-auto rounded bg-white/70 p-2 text-xs text-zinc-700 dark:bg-black/30 dark:text-zinc-300">{{ json_encode($call['arguments'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                                        @endif
+                                        <div class="mt-3 flex gap-2">
+                                            <button type="button" wire:click="approvePendingCall('{{ $call['id'] }}')" @disabled($streaming)
+                                                    data-ai-chat-ui="approval-approve"
+                                                    class="rounded-md bg-zinc-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
+                                                Approve
+                                            </button>
+                                            <button type="button" wire:click="rejectPendingCall('{{ $call['id'] }}')" @disabled($streaming)
+                                                    data-ai-chat-ui="approval-reject"
+                                                    class="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200">
+                                                Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+
+                                @if (count($approvals['calls']) > 1)
+                                    <div class="flex gap-3 px-1">
+                                        <button type="button" wire:click="approveAllPending" @disabled($streaming)
+                                                class="text-xs text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:hover:text-zinc-200">
+                                            Approve all
+                                        </button>
+                                        <button type="button" wire:click="rejectAllPending" @disabled($streaming)
+                                                class="text-xs text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:hover:text-zinc-200">
+                                            Reject all
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
                     @endif
                 </div>
             @endforeach
@@ -543,19 +736,21 @@ new class extends Component {
             @endif
         </div>
 
+        @php($composerDisabled = $streaming || $this->pendingApprovals !== null)
+
         <form wire:submit="sendMessage" class="mt-4 flex gap-2" data-ai-chat-ui="composer">
             <textarea
                 wire:model="message"
                 rows="1"
-                placeholder="Type a message..."
-                @disabled($streaming)
+                placeholder="{{ $this->pendingApprovals !== null ? 'Resolve the pending approval to continue…' : 'Type a message...' }}"
+                @disabled($composerDisabled)
                 x-data
                 x-on:input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
                 @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.sendMessage() }"
-                class="max-h-40 flex-1 resize-none overflow-y-auto rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                class="max-h-40 flex-1 resize-none overflow-y-auto rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             ></textarea>
             <button type="submit"
-                    @disabled($streaming) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
+                    @disabled($composerDisabled) class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
                 Send
             </button>
         </form>

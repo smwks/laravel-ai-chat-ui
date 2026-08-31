@@ -11,12 +11,16 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\Events\AgentPrompted;
 use Laravel\Ai\Events\InvokingTool;
 use Laravel\Ai\Events\PromptingAgent;
+use Laravel\Ai\Events\ToolApprovalRequested;
+use Laravel\Ai\Events\ToolApprovalResolved;
 use Laravel\Ai\Events\ToolInvoked;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
 use Smwks\LaravelAiChatUi\Console\Commands\InstallCommand;
 use Smwks\LaravelAiChatUi\Listeners\CaptureAgentRequest;
 use Smwks\LaravelAiChatUi\Listeners\CaptureAgentResponse;
+use Smwks\LaravelAiChatUi\Listeners\CaptureToolApprovalRequested;
+use Smwks\LaravelAiChatUi\Listeners\CaptureToolApprovalResolved;
 use Smwks\LaravelAiChatUi\Listeners\CaptureToolInvoked;
 use Smwks\LaravelAiChatUi\Listeners\CaptureToolInvoking;
 use Smwks\LaravelAiChatUi\Models\ConversationEvent;
@@ -69,6 +73,8 @@ class LaravelAiChatUiServiceProvider extends ServiceProvider
         Event::listen(AgentPrompted::class, CaptureAgentResponse::class);
         Event::listen(InvokingTool::class, CaptureToolInvoking::class);
         Event::listen(ToolInvoked::class, CaptureToolInvoked::class);
+        Event::listen(ToolApprovalRequested::class, CaptureToolApprovalRequested::class);
+        Event::listen(ToolApprovalResolved::class, CaptureToolApprovalResolved::class);
 
         Gate::policy(
             Conversation::class,
