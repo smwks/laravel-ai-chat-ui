@@ -2,7 +2,7 @@
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
 
 class EchoAgentTestUser extends Authenticatable
 {

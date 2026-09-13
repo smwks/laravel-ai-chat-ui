@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Testbench;
+namespace Smwks\LaravelAiKit\Testbench;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;

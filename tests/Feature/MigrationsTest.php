@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Schema;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
 
 it('creates the turns and events tables', function () {
     expect(Schema::hasTable('agent_conversation_turns'))->toBeTrue();

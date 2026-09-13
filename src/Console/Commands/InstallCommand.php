@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Console\Commands;
+namespace Smwks\LaravelAiKit\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;

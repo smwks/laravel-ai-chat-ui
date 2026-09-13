@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Testbench;
+namespace Smwks\LaravelAiKit\Testbench;
 
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;

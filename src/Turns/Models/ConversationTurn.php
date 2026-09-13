@@ -1,13 +1,13 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Models;
+namespace Smwks\LaravelAiKit\Turns\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
 
 class ConversationTurn extends Model
 {

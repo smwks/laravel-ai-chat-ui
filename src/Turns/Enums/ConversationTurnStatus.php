@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Enums;
+namespace Smwks\LaravelAiKit\Turns\Enums;
 
 enum ConversationTurnStatus: string
 {

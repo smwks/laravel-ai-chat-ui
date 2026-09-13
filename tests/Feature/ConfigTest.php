@@ -1,6 +1,6 @@
 <?php
 
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
 
 it('merges package defaults', function () {
     expect(config('ai-chat-ui.tables.turns'))->toBe('agent_conversation_turns');

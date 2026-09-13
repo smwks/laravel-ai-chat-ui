@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Policies;
+namespace Smwks\LaravelAiKit\Chat\Policies;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Laravel\Ai\Models\Conversation;

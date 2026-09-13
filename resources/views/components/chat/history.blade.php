@@ -7,7 +7,7 @@ use Laravel\Ai\Models\Conversation;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
 
 new class extends Component
 {

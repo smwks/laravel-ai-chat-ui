@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi;
+namespace Smwks\LaravelAiKit;
 
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Event;
@@ -16,18 +16,18 @@ use Laravel\Ai\Events\ToolApprovalResolved;
 use Laravel\Ai\Events\ToolInvoked;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
-use Smwks\LaravelAiChatUi\Console\Commands\InstallCommand;
-use Smwks\LaravelAiChatUi\Listeners\CaptureAgentRequest;
-use Smwks\LaravelAiChatUi\Listeners\CaptureAgentResponse;
-use Smwks\LaravelAiChatUi\Listeners\CaptureToolApprovalRequested;
-use Smwks\LaravelAiChatUi\Listeners\CaptureToolApprovalResolved;
-use Smwks\LaravelAiChatUi\Listeners\CaptureToolInvoked;
-use Smwks\LaravelAiChatUi\Listeners\CaptureToolInvoking;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Policies\ConversationPolicy;
-use Smwks\LaravelAiChatUi\Services\QueryTracker;
+use Smwks\LaravelAiKit\Console\Commands\InstallCommand;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureAgentRequest;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureAgentResponse;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolApprovalRequested;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolApprovalResolved;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolInvoked;
+use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolInvoking;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
+use Smwks\LaravelAiKit\Turns\Services\QueryTracker;
 
-class LaravelAiChatUiServiceProvider extends ServiceProvider
+class LaravelAiKitServiceProvider extends ServiceProvider
 {
     public function register(): void
     {

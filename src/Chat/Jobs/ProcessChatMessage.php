@@ -1,15 +1,15 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Jobs;
+namespace Smwks\LaravelAiKit\Chat\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Context;
 use Laravel\Ai\Approvals\Decisions;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
-use Smwks\LaravelAiChatUi\Services\QueryTracker;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Turns\Services\QueryTracker;
 use Throwable;
 
 class ProcessChatMessage implements ShouldQueue

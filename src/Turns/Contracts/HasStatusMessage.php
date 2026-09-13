@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Contracts;
+namespace Smwks\LaravelAiKit\Turns\Contracts;
 
 interface HasStatusMessage
 {

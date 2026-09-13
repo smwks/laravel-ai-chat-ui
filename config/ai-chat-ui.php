@@ -1,6 +1,6 @@
 <?php
 
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
 
 return [
 

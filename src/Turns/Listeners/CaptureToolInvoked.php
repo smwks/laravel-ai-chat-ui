@@ -1,11 +1,11 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Listeners;
+namespace Smwks\LaravelAiKit\Turns\Listeners;
 
 use Illuminate\Support\Facades\Context;
 use Laravel\Ai\Events\ToolInvoked;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Services\QueryTracker;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Services\QueryTracker;
 
 class CaptureToolInvoked
 {

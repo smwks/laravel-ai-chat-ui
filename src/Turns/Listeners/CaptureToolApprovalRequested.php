@@ -1,11 +1,11 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Listeners;
+namespace Smwks\LaravelAiKit\Turns\Listeners;
 
 use Illuminate\Support\Facades\Context;
 use Laravel\Ai\Approvals\PendingApproval;
 use Laravel\Ai\Events\ToolApprovalRequested;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
 
 class CaptureToolApprovalRequested
 {

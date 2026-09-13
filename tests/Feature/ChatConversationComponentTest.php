@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
-use Smwks\LaravelAiChatUi\Policies\ConversationPolicy;
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
-use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Chat\Jobs\ProcessChatMessage;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoToolAgent;
 
 class ChatConversationComponentTestUser extends Authenticatable
 {

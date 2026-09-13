@@ -1,11 +1,11 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Testbench;
+namespace Smwks\LaravelAiKit\Testbench;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
-use Smwks\LaravelAiChatUi\Contracts\HasStatusMessage;
+use Smwks\LaravelAiKit\Turns\Contracts\HasStatusMessage;
 use Stringable;
 
 class StatusMessageTool implements HasStatusMessage, Tool

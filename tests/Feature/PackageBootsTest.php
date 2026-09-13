@@ -1,9 +1,9 @@
 <?php
 
-use Smwks\LaravelAiChatUi\LaravelAiChatUiServiceProvider;
+use Smwks\LaravelAiKit\LaravelAiKitServiceProvider;
 
 it('boots the service provider', function () {
     expect(
-        app()->getProviders(LaravelAiChatUiServiceProvider::class)
+        app()->getProviders(LaravelAiKitServiceProvider::class)
     )->not->toBeEmpty();
 });

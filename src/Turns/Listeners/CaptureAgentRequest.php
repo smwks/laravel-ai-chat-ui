@@ -1,12 +1,12 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Listeners;
+namespace Smwks\LaravelAiKit\Turns\Listeners;
 
 use Illuminate\Support\Facades\Context;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Events\PromptingAgent;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
 
 class CaptureAgentRequest
 {

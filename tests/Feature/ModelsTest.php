@@ -4,9 +4,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
 
 class FakeUser extends Authenticatable
 {

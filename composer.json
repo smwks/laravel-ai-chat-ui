@@ -1,6 +1,6 @@
 {
-    "name": "smwks/laravel-ai-chat-ui",
-    "description": "Livewire chat UI and trace inspector for laravel/ai agents.",
+    "name": "smwks/laravel-ai-kit",
+    "description": "A component kit (turn/event data model + Livewire chat UI) for laravel/ai agents.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -30,18 +30,18 @@
     },
     "autoload": {
         "psr-4": {
-            "Smwks\\LaravelAiChatUi\\": "src/"
+            "Smwks\\LaravelAiKit\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Smwks\\LaravelAiChatUi\\Tests\\": "tests/"
+            "Smwks\\LaravelAiKit\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Smwks\\LaravelAiChatUi\\LaravelAiChatUiServiceProvider"
+                "Smwks\\LaravelAiKit\\LaravelAiKitServiceProvider"
             ]
         }
     },

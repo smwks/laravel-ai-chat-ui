@@ -4,11 +4,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
-use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Chat\Jobs\ProcessChatMessage;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoToolAgent;
 
 class ProcessChatMessageTestUser extends Authenticatable
 {

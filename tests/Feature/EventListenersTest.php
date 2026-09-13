@@ -8,10 +8,10 @@ use Laravel\Ai\Events\ToolApprovalRequested;
 use Laravel\Ai\Events\ToolApprovalResolved;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\ToolResult;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Testbench\EchoAgent;
-use Smwks\LaravelAiChatUi\Testbench\EchoStatusToolAgent;
-use Smwks\LaravelAiChatUi\Testbench\EchoToolAgent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
+use Smwks\LaravelAiKit\Testbench\EchoStatusToolAgent;
+use Smwks\LaravelAiKit\Testbench\EchoToolAgent;
 
 it('does nothing when context has no conversation id', function () {
     EchoAgent::fake(['hi']);

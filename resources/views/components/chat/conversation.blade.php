@@ -9,10 +9,10 @@ use Laravel\Ai\Models\Conversation;
 use Laravel\Ai\Models\ConversationMessage;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Chat\Jobs\ProcessChatMessage;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
 
 new class extends Component {
     public Conversation $conversation;

@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Responses\Data\ToolCall;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Testbench\EchoHttpToolAgent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Testbench\EchoHttpToolAgent;
 
 it('captures one http.exchange event only while context holds a conversation id', function () {
     Http::fake(['https://example.com/*' => Http::response(['ok' => true], 200, ['X-Test' => 'yes'])]);

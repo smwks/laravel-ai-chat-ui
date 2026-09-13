@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Models;
+namespace Smwks\LaravelAiKit\Turns\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;

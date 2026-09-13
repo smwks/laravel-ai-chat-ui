@@ -1,11 +1,11 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Tests;
+namespace Smwks\LaravelAiKit\Tests;
 
 use Laravel\Ai\AiServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
-use Smwks\LaravelAiChatUi\LaravelAiChatUiServiceProvider;
+use Smwks\LaravelAiKit\LaravelAiKitServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -14,7 +14,7 @@ abstract class TestCase extends BaseTestCase
         return [
             AiServiceProvider::class,
             LivewireServiceProvider::class,
-            LaravelAiChatUiServiceProvider::class,
+            LaravelAiKitServiceProvider::class,
         ];
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Smwks\LaravelAiChatUi\Services;
+namespace Smwks\LaravelAiKit\Turns\Services;
 
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Event;

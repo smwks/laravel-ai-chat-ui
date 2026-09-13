@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
 
 class ChatHistoryComponentTestUser extends Authenticatable
 {

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
-use Smwks\LaravelAiChatUi\Services\QueryTracker;
+use Smwks\LaravelAiKit\Turns\Services\QueryTracker;
 
 it('is bound as a singleton', function () {
     expect(app(QueryTracker::class))->toBe(app(QueryTracker::class));

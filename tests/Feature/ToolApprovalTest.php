@@ -15,12 +15,12 @@ use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\Usage;
 use Livewire\Livewire;
-use Smwks\LaravelAiChatUi\Enums\ConversationTurnStatus;
-use Smwks\LaravelAiChatUi\Jobs\ProcessChatMessage;
-use Smwks\LaravelAiChatUi\Models\ConversationEvent;
-use Smwks\LaravelAiChatUi\Models\ConversationTurn;
-use Smwks\LaravelAiChatUi\Policies\ConversationPolicy;
-use Smwks\LaravelAiChatUi\Testbench\ApprovalToolAgent;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Chat\Jobs\ProcessChatMessage;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
+use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
+use Smwks\LaravelAiKit\Testbench\ApprovalToolAgent;
 
 class ToolApprovalTestUser extends Authenticatable
 {
