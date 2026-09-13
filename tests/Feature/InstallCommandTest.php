@@ -16,3 +16,13 @@ it('fails fast with instructions when the laravel/ai tables are missing', functi
         ->expectsOutputToContain('vendor:publish --provider="Laravel\Ai\AiServiceProvider"')
         ->assertExitCode(1);
 });
+
+it('fails fast with instructions when this package\'s own turns/events tables are missing, even though laravel/ai\'s tables exist', function () {
+    Schema::dropIfExists('agent_conversation_events');
+    Schema::dropIfExists('agent_conversation_turns');
+
+    $this->artisan('ai-kit:install')
+        ->expectsOutputToContain('agent_conversation_turns')
+        ->expectsOutputToContain('vendor:publish --tag=ai-kit-migrations')
+        ->assertExitCode(1);
+});
