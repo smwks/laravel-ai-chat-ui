@@ -79,7 +79,7 @@ it('sends the given initial message on mount and dispatches a job', function () 
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'initialMessage' => 'Hello there',
     ]);
@@ -91,18 +91,18 @@ it('sends the given initial message on mount and dispatches a job', function () 
     expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(1);
 });
 
-it('dispatches the job with config(ai-chat-ui.agent) when no agent prop is given', function () {
+it('dispatches the job with config(ai-kit.chat.agent) when no agent prop is given', function () {
     [, $conversation] = makeConversationFixture();
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'initialMessage' => 'Hello there',
     ]);
 
     Bus::assertDispatched(ProcessChatMessage::class, function (ProcessChatMessage $job) {
-        return $job->agentClass === config('ai-chat-ui.agent');
+        return $job->agentClass === config('ai-kit.chat.agent');
     });
 });
 
@@ -111,7 +111,7 @@ it('dispatches the job with the given agent prop instead of the config default',
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'agent' => EchoToolAgent::class,
         'initialMessage' => 'Hello there',
@@ -127,7 +127,7 @@ it('does not auto-send a turn when no initial message is given', function () {
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     Bus::assertNotDispatched(ProcessChatMessage::class);
     expect(ConversationTurn::where('conversation_id', $conversation->id)->count())->toBe(0);
@@ -138,7 +138,7 @@ it('rejects an initial message longer than 2000 characters', function () {
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'initialMessage' => str_repeat('a', 2001),
     ])->assertStatus(422);
@@ -154,7 +154,7 @@ it('denies auto-sending an initial message when the user can view but not sendMe
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'initialMessage' => 'Hello there',
     ])->assertForbidden();
@@ -169,7 +169,7 @@ it('denies mounting a conversation you do not own', function () {
     $stranger = ChatConversationComponentTestUser::create(['name' => 'Stranger']);
     test()->actingAs($stranger);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertForbidden();
 });
 
@@ -179,7 +179,7 @@ it('denies sending a message on a conversation you do not own', function () {
     // Mount as the owner (allowed to view) so we can isolate and prove
     // sendMessage()'s own authorization check, independent of the
     // mount()-time view check covered by the previous test.
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $stranger = ChatConversationComponentTestUser::create(['name' => 'Stranger']);
     test()->actingAs($stranger);
@@ -206,7 +206,7 @@ it('strips raw script tags and neutralizes unsafe link schemes when rendering as
         'meta' => [],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])->html();
 
     // The page legitimately ships its own <script> tags (json-viewer, scroll helper);
     // what must NOT survive is the injected payload becoming a live, executable tag
@@ -232,17 +232,17 @@ it('caches rendered markdown per message id instead of re-parsing on every rende
         'meta' => [],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertSee('first content');
 
-    expect(\Illuminate\Support\Facades\Cache::has("ai-chat-ui.rendered-markdown.{$message->id}"))->toBeTrue();
+    expect(\Illuminate\Support\Facades\Cache::has("ai-kit.rendered-markdown.{$message->id}"))->toBeTrue();
 
     // Seed a sentinel directly into the cache for this message id — a fresh
     // render must reuse it rather than re-parsing $message->content, proving
     // the cache is actually consulted rather than just incidentally populated.
-    \Illuminate\Support\Facades\Cache::forever("ai-chat-ui.rendered-markdown.{$message->id}", '<p>cached sentinel</p>');
+    \Illuminate\Support\Facades\Cache::forever("ai-kit.rendered-markdown.{$message->id}", '<p>cached sentinel</p>');
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertSeeHtml('cached sentinel')
         ->assertDontSee('first content');
 });
@@ -268,7 +268,7 @@ it('groups trace events under the assistant message from the same turn', functio
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
     $grouped = $component->instance()->eventsByAssistantMessageId();
@@ -307,7 +307,7 @@ it('reorders a tool\'s own http.exchange to render after the tool.invoked box, n
         'payload' => ['tool' => 'FetchPageTool', 'tool_invocation_id' => 'call-1'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
     $types = $component->instance()->eventsByAssistantMessageId()->get($assistantMessage->id)->pluck('event_type')->all();
@@ -358,7 +358,7 @@ it('groups each http.exchange under the correct call when the same tool runs twi
         'payload' => ['tool' => 'FetchPageTool', 'tool_invocation_id' => 'call-2'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
     $events = $component->instance()->eventsByAssistantMessageId()->get($assistantMessage->id)->values();
@@ -401,7 +401,7 @@ it('does not leak a trace event belonging to another conversation via showDetail
         'payload' => ['prompt' => 'secret prompt belonging to conversation B'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversationA])
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversationA])
         ->call('showDetails', $eventB->id);
 
     expect($component->instance()->selectedEvent())->toBeNull();
@@ -424,7 +424,7 @@ it('renders the built-in tool partial when no tool_views mapping exists for that
         'payload' => ['tool' => 'weather', 'parameters' => ['city' => 'NYC'], 'result' => 'Sunny'],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -436,7 +436,7 @@ it('renders a consumer-registered tool view for a specific tool name', function 
     [$user, $conversation] = makeConversationFixture();
 
     View::addLocation(__DIR__.'/../Fixtures/views');
-    config(['ai-chat-ui.tool_views' => ['weather' => 'custom-tool-view']]);
+    config(['ai-kit.chat.tool_views' => ['weather' => 'custom-tool-view']]);
 
     $turn = ConversationTurn::create([
         'conversation_id' => $conversation->id,
@@ -452,7 +452,7 @@ it('renders a consumer-registered tool view for a specific tool name', function 
         'payload' => ['tool' => 'weather', 'parameters' => ['city' => 'NYC'], 'result' => 'Sunny'],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -465,7 +465,7 @@ it('shows a generic thinking status while streaming with no tool in flight', fun
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->set('message', 'hi')
         ->call('sendMessage')
         ->assertSee('Thinking…');
@@ -476,7 +476,7 @@ it('shows the tool status message while an unmatched tool.invoking event is stre
 
     Bus::fake();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->set('message', 'hi')
         ->call('sendMessage');
 
@@ -498,7 +498,7 @@ it('falls back to a generic thinking status once the matching tool.invoked event
 
     Bus::fake();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->set('message', 'hi')
         ->call('sendMessage');
 
@@ -544,7 +544,7 @@ it('excludes tool.invoking events from the historical grouped trace list', funct
         'payload' => ['tool' => 'Weather', 'tool_invocation_id' => 'abc', 'status' => 'Checking the weather…'],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
     $assistantMessage = $conversation->messages()->where('role', 'assistant')->first();
     $grouped = $component->instance()->eventsByAssistantMessageId();
 
@@ -576,7 +576,7 @@ it('renders one merged http-exchange detail panel with request and response bodi
         ],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -609,7 +609,7 @@ it('renders the new json tree viewer, not the old custom element, on the tool ra
         'payload' => ['tool' => 'weather', 'parameters' => ['city' => 'NYC'], 'result' => 'Sunny'],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -634,7 +634,7 @@ it('renders the new json tree viewer, not the old custom element, on the llm.req
         'payload' => ['provider' => 'openai', 'model' => 'gpt-5', 'prompt' => 'hi', 'messages' => [], 'tools' => []],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -659,7 +659,7 @@ it('renders the new json tree viewer, not the old custom element, on the llm.res
         'payload' => ['text' => 'hello there', 'usage' => [], 'meta' => []],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -670,7 +670,7 @@ it('renders the new json tree viewer, not the old custom element, on the llm.res
 it('does not indent llm.request and llm.response, which bracket the whole prompt() call', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $request = new ConversationEvent(['event_type' => 'llm.request', 'payload' => []]);
     $response = new ConversationEvent(['event_type' => 'llm.response', 'payload' => []]);
@@ -682,7 +682,7 @@ it('does not indent llm.request and llm.response, which bracket the whole prompt
 it('indents a tool call and a provider-sourced http exchange one level under the llm bracket', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $tool = new ConversationEvent(['event_type' => 'tool.invoked', 'payload' => ['tool' => 'Weather']]);
     $providerExchange = new ConversationEvent(['event_type' => 'http.exchange', 'payload' => ['source' => 'provider']]);
@@ -694,7 +694,7 @@ it('indents a tool call and a provider-sourced http exchange one level under the
 it('indents an http exchange made from inside a tool one level deeper than the tool call itself', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $toolExchange = new ConversationEvent(['event_type' => 'http.exchange', 'payload' => ['source' => 'Weather']]);
 
@@ -704,7 +704,7 @@ it('indents an http exchange made from inside a tool one level deeper than the t
 it('treats a missing http source as a provider call for indentation, for events captured before this feature existed', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $legacyExchange = new ConversationEvent(['event_type' => 'http.exchange', 'payload' => []]);
 
@@ -714,7 +714,7 @@ it('treats a missing http source as a provider call for indentation, for events 
 it('shows the provider and model as the llm.request subtitle', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $event = new ConversationEvent([
         'event_type' => 'llm.request',
@@ -727,7 +727,7 @@ it('shows the provider and model as the llm.request subtitle', function () {
 it('shows the method and host as the http.exchange subtitle', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $event = new ConversationEvent([
         'event_type' => 'http.exchange',
@@ -740,7 +740,7 @@ it('shows the method and host as the http.exchange subtitle', function () {
 it('shows the tool name as the tool.invoked subtitle', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $event = new ConversationEvent(['event_type' => 'tool.invoked', 'payload' => ['tool' => 'FindTreasureTool']]);
 
@@ -750,7 +750,7 @@ it('shows the tool name as the tool.invoked subtitle', function () {
 it('has no subtitle for event types that carry no extra summary info', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     $event = new ConversationEvent(['event_type' => 'llm.response', 'payload' => ['text' => 'hi']]);
 
@@ -760,7 +760,7 @@ it('has no subtitle for event types that carry no extra summary info', function 
 it('does not blow up when llm.request/http.exchange payloads are missing the subtitle fields', function () {
     [, $conversation] = makeConversationFixture();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation]);
+    $component = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation]);
 
     expect($component->instance()->eventSubtitle(new ConversationEvent(['event_type' => 'llm.request', 'payload' => []])))->toBeNull();
     expect($component->instance()->eventSubtitle(new ConversationEvent(['event_type' => 'http.exchange', 'payload' => []])))->toBeNull();
@@ -770,7 +770,7 @@ it('still uses the built-in tool partial for a different tool not covered by the
     [$user, $conversation] = makeConversationFixture();
 
     View::addLocation(__DIR__.'/../Fixtures/views');
-    config(['ai-chat-ui.tool_views' => ['weather' => 'custom-tool-view']]);
+    config(['ai-kit.chat.tool_views' => ['weather' => 'custom-tool-view']]);
 
     $turn = ConversationTurn::create([
         'conversation_id' => $conversation->id,
@@ -786,7 +786,7 @@ it('still uses the built-in tool partial for a different tool not covered by the
         'payload' => ['tool' => 'send_email', 'parameters' => ['to' => 'a@b.com'], 'result' => 'sent'],
     ]);
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->call('showDetails', $event->id)
         ->html();
 
@@ -815,11 +815,11 @@ it('shows the show-thoughts disclosure by default for a completed turn', functio
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertSee('show thoughts');
 });
 
-it('exposes data-ai-chat-ui hooks for styling', function () {
+it('exposes data-ai-kit hooks for styling', function () {
     [$user, $conversation] = makeConversationFixture();
 
     EchoAgent::fake(['Echo: hi']);
@@ -840,17 +840,17 @@ it('exposes data-ai-chat-ui hooks for styling', function () {
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
-        ->assertSeeHtml('data-ai-chat-ui="root"')
-        ->assertSeeHtml('data-ai-chat-ui="header"')
-        ->assertSeeHtml('data-ai-chat-ui="thread"')
-        ->assertSeeHtml('data-ai-chat-ui="composer"')
-        ->assertSeeHtml('data-ai-chat-ui="message"')
-        ->assertSeeHtml('data-ai-chat-ui-role="user"')
-        ->assertSeeHtml('data-ai-chat-ui-role="assistant"')
-        ->assertSeeHtml('data-ai-chat-ui="reply-body"')
-        ->assertSeeHtml('data-ai-chat-ui="thoughts-toggle"')
-        ->assertSeeHtml('data-ai-chat-ui="thought-event"');
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+        ->assertSeeHtml('data-ai-kit="root"')
+        ->assertSeeHtml('data-ai-kit="header"')
+        ->assertSeeHtml('data-ai-kit="thread"')
+        ->assertSeeHtml('data-ai-kit="composer"')
+        ->assertSeeHtml('data-ai-kit="message"')
+        ->assertSeeHtml('data-ai-kit-role="user"')
+        ->assertSeeHtml('data-ai-kit-role="assistant"')
+        ->assertSeeHtml('data-ai-kit="reply-body"')
+        ->assertSeeHtml('data-ai-kit="thoughts-toggle"')
+        ->assertSeeHtml('data-ai-kit="thought-event"');
 });
 
 it('hides the show-thoughts disclosure when the showThoughts prop is false', function () {
@@ -874,7 +874,7 @@ it('hides the show-thoughts disclosure when the showThoughts prop is false', fun
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showThoughts' => false,
     ])->assertDontSee('show thoughts');
@@ -903,7 +903,7 @@ it('hides the show-thoughts disclosure when the viewThoughts policy denies it, e
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showThoughts' => true,
     ])->assertDontSee('show thoughts');
@@ -926,7 +926,7 @@ it('forbids showDetails() when thoughts are not allowed, not just hiding the but
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showThoughts' => false,
     ])->call('showDetails', $event->id)->assertForbidden();
@@ -935,14 +935,14 @@ it('forbids showDetails() when thoughts are not allowed, not just hiding the but
 it('shows the conversation id and click-to-copy affordance by default', function () {
     [, $conversation] = makeConversationFixture();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertSee($conversation->id);
 });
 
 it('hides the conversation id when the showIds prop is false', function () {
     [, $conversation] = makeConversationFixture();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showIds' => false,
     ])->assertDontSee($conversation->id);
@@ -965,7 +965,7 @@ it('hides an event id in the detail panel when the showIds prop is false', funct
         'payload' => ['prompt' => 'hi'],
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showIds' => false,
     ])->call('showDetails', $event->id)->assertDontSee($event->id);
@@ -974,14 +974,14 @@ it('hides an event id in the detail panel when the showIds prop is false', funct
 it('shows its own title header by default', function () {
     [, $conversation] = makeConversationFixture();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->assertSee($conversation->title);
 });
 
 it('hides the title header and conversation id when showHeader is false', function () {
     [, $conversation] = makeConversationFixture();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'showHeader' => false,
     ])
@@ -992,7 +992,7 @@ it('hides the title header and conversation id when showHeader is false', functi
 it('uses a custom containerClass when given', function () {
     [, $conversation] = makeConversationFixture();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', [
+    Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'containerClass' => 'my-custom-wrapper',
     ])
@@ -1003,7 +1003,7 @@ it('uses a custom containerClass when given', function () {
 it('does not make the thread its own scroll container by default', function () {
     [, $conversation] = makeConversationFixture();
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])->html();
 
     expect($html)->not->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto');
     expect($html)->not->toContain('mx-auto flex h-full max-w-3xl flex-col p-6');
@@ -1012,7 +1012,7 @@ it('does not make the thread its own scroll container by default', function () {
 it('makes the thread scroll and pins the composer when fillHeight is true', function () {
     [, $conversation] = makeConversationFixture();
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+    $html = Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'fillHeight' => true,
     ])->html();
@@ -1024,7 +1024,7 @@ it('makes the thread scroll and pins the composer when fillHeight is true', func
 it('teleports the details panel to body with a default z-index of 50', function () {
     [, $conversation] = makeConversationFixture();
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])->html();
 
     expect($html)->toContain('x-teleport="body"');
     expect($html)->toContain('style="z-index: 50"');
@@ -1033,7 +1033,7 @@ it('teleports the details panel to body with a default z-index of 50', function 
 it('uses a custom detailsZIndex when given', function () {
     [, $conversation] = makeConversationFixture();
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', [
+    $html = Livewire::test('ai-kit::components.chat.conversation', [
         'conversation' => $conversation,
         'detailsZIndex' => 9999,
     ])->html();
@@ -1044,7 +1044,7 @@ it('uses a custom detailsZIndex when given', function () {
 it('renders an auto-growing textarea composer wired to send on Enter, not Shift+Enter', function () {
     [, $conversation] = makeConversationFixture();
 
-    $html = Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])->html();
+    $html = Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])->html();
 
     expect($html)->toContain('<textarea');
     expect($html)->not->toContain('<input');
@@ -1057,7 +1057,7 @@ it('still sends the message when sendMessage is called, regardless of composer m
 
     Bus::fake();
 
-    Livewire::test('ai-chat-ui::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
         ->set('message', 'hello via textarea')
         ->call('sendMessage');
 

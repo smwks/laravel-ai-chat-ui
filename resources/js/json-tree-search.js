@@ -1,11 +1,11 @@
 /**
- * Plain-text search over a rendered ai-chat-ui JSON tree (see
+ * Plain-text search over a rendered ai-kit JSON tree (see
  * partials/json-viewer.blade.php). Not JSON-aware — it walks the already
  * -rendered DOM text nodes, wraps matches in <mark>, and expands any
  * collapsed ancestor (an element with an Alpine x-data holding `open`)
  * so a match inside a collapsed node becomes visible.
  */
-function aiChatUiJsonSearch(root, search) {
+function aiKitJsonSearch(root, search) {
     root.querySelectorAll('mark.json-search-hit').forEach((mark) => {
         const parent = mark.parentNode;
         parent.replaceChild(document.createTextNode(mark.textContent), mark);
@@ -69,4 +69,4 @@ function aiChatUiJsonSearch(root, search) {
     }
 }
 
-window.aiChatUiJsonSearch = aiChatUiJsonSearch;
+window.aiKitJsonSearch = aiKitJsonSearch;

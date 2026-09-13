@@ -19,7 +19,7 @@ new class extends Component {
 
     /**
      * Agent class to use for this conversation, e.g. App\Ai\Agents\SupportAgent::class.
-     * Falls back to config('ai-chat-ui.agent') when not given — pass this explicitly
+     * Falls back to config('ai-kit.chat.agent') when not given — pass this explicitly
      * when a site embeds more than one bot, so each host page pins its own agent
      * rather than sharing the single globally-configured one.
      */
@@ -161,7 +161,7 @@ new class extends Component {
 
     protected function resolvedAgentClass(): string
     {
-        return $this->agent ?? config('ai-chat-ui.agent');
+        return $this->agent ?? config('ai-kit.chat.agent');
     }
 
     /**
@@ -307,7 +307,7 @@ new class extends Component {
     public function renderedMarkdown(ConversationMessage $message): string
     {
         return Cache::rememberForever(
-            "ai-chat-ui.rendered-markdown.{$message->id}",
+            "ai-kit.rendered-markdown.{$message->id}",
             fn () => Str::markdown($message->content, ['html_input' => 'strip', 'allow_unsafe_links' => false])
         );
     }
@@ -517,12 +517,12 @@ new class extends Component {
     {
         if ($event->event_type === 'tool.invoked') {
             $tool = $event->payload['tool'] ?? null;
-            $view = $tool ? config("ai-chat-ui.tool_views.{$tool}") : null;
+            $view = $tool ? config("ai-kit.chat.tool_views.{$tool}") : null;
 
-            return $view ?? 'ai-chat-ui::components.chat.partials.thought-details.tool';
+            return $view ?? 'ai-kit::components.chat.partials.thought-details.tool';
         }
 
-        return 'ai-chat-ui::components.chat.partials.thought-details.' . match ($event->event_type) {
+        return 'ai-kit::components.chat.partials.thought-details.' . match ($event->event_type) {
                 'llm.request' => 'llm-request',
                 'llm.response' => 'llm-response',
                 'http.exchange' => 'http-exchange',
@@ -578,13 +578,13 @@ new class extends Component {
 
     <div
         class="{{ $containerClass ?? ($fillHeight ? 'mx-auto flex h-full max-w-3xl flex-col p-6' : 'mx-auto flex max-w-3xl flex-col p-6') }}"
-        data-ai-chat-ui="root"
+        data-ai-kit="root"
     >
         @if ($showHeader)
-            <div class="mb-4" data-ai-chat-ui="header">
+            <div class="mb-4" data-ai-kit="header">
                 <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{{ $conversation->title }}</h1>
                 @if ($showIds)
-                    @include('ai-chat-ui::components.chat.partials.copyable-id', ['value' => $conversation->id])
+                    @include('ai-kit::components.chat.partials.copyable-id', ['value' => $conversation->id])
                 @endif
             </div>
         @endif
@@ -598,10 +598,10 @@ new class extends Component {
              handed this component a bounded box to fill. --}}
         <div
             class="{{ $fillHeight ? 'min-h-0 flex-1 space-y-4 overflow-y-auto' : 'space-y-4' }}"
-            data-ai-chat-ui="thread"
+            data-ai-kit="thread"
         >
             @foreach ($this->messages as $msg)
-                <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2" data-ai-chat-ui="message" data-ai-chat-ui-role="{{ $msg->role }}">
+                <div wire:key="msg-{{ $msg->id }}" class="flex flex-col gap-2" data-ai-kit="message" data-ai-kit-role="{{ $msg->role }}">
                     @if ($msg->role === 'user')
                         <div
                             class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900">
@@ -612,13 +612,13 @@ new class extends Component {
 
                         @if ($this->canViewThoughts() && $turnEvents->isNotEmpty())
                             <div x-data="{ open: false }" class="max-w-md">
-                                <button type="button" @click="open = !open" data-ai-chat-ui="thoughts-toggle"
+                                <button type="button" @click="open = !open" data-ai-kit="thoughts-toggle"
                                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                                     <span x-text="open ? '▾ hide thoughts' : '▸ show thoughts'"></span>
                                 </button>
                                 <div x-show="open" x-cloak class="mt-2 space-y-2">
                                     @foreach ($turnEvents as $event)
-                                        <div wire:key="event-{{ $event->id }}" data-ai-chat-ui="thought-event"
+                                        <div wire:key="event-{{ $event->id }}" data-ai-kit="thought-event"
                                              class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
                                             <div class="flex items-center gap-2">
                                                 <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
@@ -639,15 +639,15 @@ new class extends Component {
                         @endif
 
                         @if (filled($msg->content))
-                            <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-chat-ui="reply-body">
+                            <div class="max-w-md rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700" data-ai-kit="reply-body">
                                 {!! $this->renderedMarkdown($msg) !!}
                             </div>
                         @endif
 
                         @if (($approvals = $this->pendingApprovals) && $approvals['messageId'] === $msg->id)
-                            <div class="max-w-md space-y-2" data-ai-chat-ui="approval">
+                            <div class="max-w-md space-y-2" data-ai-kit="approval">
                                 @foreach ($approvals['calls'] as $call)
-                                    <div wire:key="approval-{{ $call['id'] }}" data-ai-chat-ui="approval-request"
+                                    <div wire:key="approval-{{ $call['id'] }}" data-ai-kit="approval-request"
                                          class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/20">
                                         <p class="font-medium text-zinc-900 dark:text-zinc-100">
                                             Run <code class="rounded bg-white/70 px-1 text-xs dark:bg-black/30">{{ $call['tool'] }}</code>?
@@ -660,12 +660,12 @@ new class extends Component {
                                         @endif
                                         <div class="mt-3 flex gap-2">
                                             <button type="button" wire:click="approvePendingCall('{{ $call['id'] }}')" @disabled($streaming)
-                                                    data-ai-chat-ui="approval-approve"
+                                                    data-ai-kit="approval-approve"
                                                     class="rounded-md bg-zinc-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
                                                 Approve
                                             </button>
                                             <button type="button" wire:click="rejectPendingCall('{{ $call['id'] }}')" @disabled($streaming)
-                                                    data-ai-chat-ui="approval-reject"
+                                                    data-ai-kit="approval-reject"
                                                     class="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200">
                                                 Reject
                                             </button>
@@ -694,7 +694,7 @@ new class extends Component {
             @if ($pendingUserMessage)
                 <div
                     class="ml-auto max-w-md rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
-                    data-ai-chat-ui="message" data-ai-chat-ui-role="user"
+                    data-ai-kit="message" data-ai-kit-role="user"
                 >
                     {{ $pendingUserMessage }}
                 </div>
@@ -703,14 +703,14 @@ new class extends Component {
             @if ($streaming)
                 @if ($this->canViewThoughts())
                     <div x-data="{ open: false }" class="max-w-md">
-                        <button type="button" @click="open = !open" data-ai-chat-ui="thoughts-toggle"
+                        <button type="button" @click="open = !open" data-ai-kit="thoughts-toggle"
                                 class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                             <span x-show="!open" class="animate-pulse">▸ {{ $this->currentStatus }}</span>
                             <span x-show="open" x-cloak>▾ hide thoughts</span>
                         </button>
                         <div x-show="open" x-cloak class="mt-2 space-y-2">
                             @foreach ($this->visibleStreamingEvents() as $event)
-                                <div wire:key="stream-event-{{ $event->id }}" data-ai-chat-ui="thought-event"
+                                <div wire:key="stream-event-{{ $event->id }}" data-ai-kit="thought-event"
                                      class="rounded-lg border p-2 text-xs {{ $this->eventColorClasses($event->event_type) }} {{ $this->eventIndentClass($event) }}">
                                     <div class="flex items-center gap-2">
                                         <span class="shrink-0 font-semibold">{{ $this->eventLabel($event->event_type) }}</span>
@@ -738,7 +738,7 @@ new class extends Component {
 
         @php($composerDisabled = $streaming || $this->pendingApprovals !== null)
 
-        <form wire:submit="sendMessage" class="mt-4 flex gap-2" data-ai-chat-ui="composer">
+        <form wire:submit="sendMessage" class="mt-4 flex gap-2" data-ai-kit="composer">
             <textarea
                 wire:model="message"
                 rows="1"
@@ -789,9 +789,9 @@ new class extends Component {
     </div>
 
     @assets
-        <script src="{{ asset('vendor/ai-chat-ui/json-viewer.min.js') }}" crossorigin="anonymous"></script>
-        <script src="{{ asset('vendor/ai-chat-ui/json-tree-search.js') }}" crossorigin="anonymous"></script>
-        <link rel="stylesheet" href="{{ asset('vendor/ai-chat-ui/reply-body.css') }}" crossorigin="anonymous">
+        <script src="{{ asset('vendor/ai-kit/json-viewer.min.js') }}" crossorigin="anonymous"></script>
+        <script src="{{ asset('vendor/ai-kit/json-tree-search.js') }}" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="{{ asset('vendor/ai-kit/reply-body.css') }}" crossorigin="anonymous">
     @endassets
 
     @script
@@ -799,15 +799,15 @@ new class extends Component {
             // $el is this component's own root element — scoped per instance, unlike a
             // global id, so two chat.conversation components on one page each scroll
             // their own thread rather than fighting over the same #message-thread.
-            function scrollAiChatUiThreadToBottom() {
-                const thread = $el.querySelector('[data-ai-chat-ui="thread"]');
+            function scrollAiKitThreadToBottom() {
+                const thread = $el.querySelector('[data-ai-kit="thread"]');
                 if (thread) thread.scrollTop = thread.scrollHeight;
             }
 
-            document.addEventListener('livewire:navigated', scrollAiChatUiThreadToBottom);
-            document.addEventListener('livewire:update', scrollAiChatUiThreadToBottom);
+            document.addEventListener('livewire:navigated', scrollAiKitThreadToBottom);
+            document.addEventListener('livewire:update', scrollAiKitThreadToBottom);
 
-            scrollAiChatUiThreadToBottom();
+            scrollAiKitThreadToBottom();
         </script>
     @endscript
 </div>

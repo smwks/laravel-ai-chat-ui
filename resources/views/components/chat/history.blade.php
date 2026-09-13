@@ -70,13 +70,13 @@ new class extends Component
 
         abort_unless(Gate::forUser(Auth::user())->allows('view', $conversation), 403);
 
-        $this->dispatch('ai-chat-ui-conversation-selected', conversationId: $conversationId);
+        $this->dispatch('ai-kit-conversation-selected', conversationId: $conversationId);
     }
 }; ?>
 
-<div class="{{ $containerClass ?? 'w-full p-6' }}" data-ai-chat-ui="root">
+<div class="{{ $containerClass ?? 'w-full p-6' }}" data-ai-kit="root">
     @if ($showHeader)
-        <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100" data-ai-chat-ui="header">Conversation history</h1>
+        <h1 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100" data-ai-kit="header">Conversation history</h1>
     @endif
 
     <input

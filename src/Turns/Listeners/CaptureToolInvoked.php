@@ -24,16 +24,16 @@ class CaptureToolInvoked
         // we won't write an event, so a nested/failed tool call never leaves a
         // stale tool_source/tool_invocation_id attributing an unrelated later
         // HTTP call to it.
-        Context::forget('ai-chat-ui.tool_source');
-        Context::forget('ai-chat-ui.tool_invocation_id');
+        Context::forget('ai-kit.tool_source');
+        Context::forget('ai-kit.tool_invocation_id');
 
-        if (! Context::has('ai-chat-ui.conversation_id')) {
+        if (! Context::has('ai-kit.conversation_id')) {
             return;
         }
 
         ConversationEvent::create([
-            'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
-            'turn_id' => Context::get('ai-chat-ui.turn_id'),
+            'conversation_id' => Context::get('ai-kit.conversation_id'),
+            'turn_id' => Context::get('ai-kit.turn_id'),
             'event_type' => 'tool.invoked',
             'payload' => [
                 'tool' => class_basename($event->tool),

@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Schema;
 
 class InstallCommand extends Command
 {
-    protected $signature = 'ai-chat-ui:install';
+    protected $signature = 'ai-kit:install';
 
-    protected $description = 'Verify laravel/ai\'s conversation tables exist before using ai-chat-ui';
+    protected $description = 'Verify laravel/ai\'s conversation tables exist before using ai-kit';
 
     public function handle(): int
     {
@@ -17,7 +17,7 @@ class InstallCommand extends Command
         $messagesTable = config('ai.conversations.tables.messages', 'agent_conversation_messages');
 
         if (Schema::hasTable($conversationsTable) && Schema::hasTable($messagesTable)) {
-            $this->info("Found {$conversationsTable} and {$messagesTable} — ai-chat-ui is ready to use.");
+            $this->info("Found {$conversationsTable} and {$messagesTable} — ai-kit is ready to use.");
 
             return self::SUCCESS;
         }

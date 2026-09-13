@@ -31,43 +31,43 @@ function actingAsChatUser(): ChatNewComponentTestUser
 it('renders the chat.new component', function () {
     actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new')->assertOk();
+    Livewire::test('ai-kit::components.chat.new')->assertOk();
 });
 
 it('shows its own heading by default', function () {
     actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new')->assertSee('New conversation');
+    Livewire::test('ai-kit::components.chat.new')->assertSee('New conversation');
 });
 
 it('hides the heading when showHeader is false', function () {
     actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new', ['showHeader' => false])
+    Livewire::test('ai-kit::components.chat.new', ['showHeader' => false])
         ->assertDontSee('New conversation');
 });
 
 it('uses a custom containerClass when given', function () {
     actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new', ['containerClass' => 'my-custom-wrapper'])
+    Livewire::test('ai-kit::components.chat.new', ['containerClass' => 'my-custom-wrapper'])
         ->assertSeeHtml('my-custom-wrapper')
         ->assertDontSeeHtml('max-w-2xl');
 });
 
-it('exposes data-ai-chat-ui hooks for styling', function () {
+it('exposes data-ai-kit hooks for styling', function () {
     actingAsChatUser();
 
-    Livewire::test('ai-chat-ui::components.chat.new')
-        ->assertSeeHtml('data-ai-chat-ui="root"')
-        ->assertSeeHtml('data-ai-chat-ui="header"')
-        ->assertSeeHtml('data-ai-chat-ui="composer"');
+    Livewire::test('ai-kit::components.chat.new')
+        ->assertSeeHtml('data-ai-kit="root"')
+        ->assertSeeHtml('data-ai-kit="header"')
+        ->assertSeeHtml('data-ai-kit="composer"');
 });
 
-it('creates a conversation and dispatches ai-chat-ui-conversation-started', function () {
+it('creates a conversation and dispatches ai-kit-conversation-started', function () {
     $user = actingAsChatUser();
 
-    $component = Livewire::test('ai-chat-ui::components.chat.new')
+    $component = Livewire::test('ai-kit::components.chat.new')
         ->set('message', 'What is the weather like?')
         ->call('sendMessage');
 
@@ -79,7 +79,7 @@ it('creates a conversation and dispatches ai-chat-ui-conversation-started', func
     expect($conversation->title)->toBe('What is the weather like?');
 
     $component->assertDispatched(
-        'ai-chat-ui-conversation-started',
+        'ai-kit-conversation-started',
         conversationId: $conversation->id,
         message: 'What is the weather like?'
     );

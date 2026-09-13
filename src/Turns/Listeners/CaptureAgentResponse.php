@@ -11,7 +11,7 @@ class CaptureAgentResponse
 {
     public function __invoke(AgentPrompted $event): void
     {
-        if (! Context::has('ai-chat-ui.conversation_id')) {
+        if (! Context::has('ai-kit.conversation_id')) {
             return;
         }
 
@@ -20,8 +20,8 @@ class CaptureAgentResponse
         }
 
         ConversationEvent::create([
-            'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
-            'turn_id' => Context::get('ai-chat-ui.turn_id'),
+            'conversation_id' => Context::get('ai-kit.conversation_id'),
+            'turn_id' => Context::get('ai-kit.turn_id'),
             'event_type' => 'llm.response',
             'payload' => [
                 'invocation_id' => $event->invocationId,

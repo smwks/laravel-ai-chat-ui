@@ -35,16 +35,16 @@ new class extends Component
             'title' => Str::limit($this->message, 60, ''),
         ]);
 
-        $this->dispatch('ai-chat-ui-conversation-started', conversationId: $conversation->id, message: $this->message);
+        $this->dispatch('ai-kit-conversation-started', conversationId: $conversation->id, message: $this->message);
     }
 }; ?>
 
-<div class="{{ $containerClass ?? 'mx-auto flex w-full max-w-2xl flex-col gap-6 py-16' }}" data-ai-chat-ui="root">
+<div class="{{ $containerClass ?? 'mx-auto flex w-full max-w-2xl flex-col gap-6 py-16' }}" data-ai-kit="root">
     @if ($showHeader)
-        <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100" data-ai-chat-ui="header">New conversation</h1>
+        <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100" data-ai-kit="header">New conversation</h1>
     @endif
 
-    <form wire:submit="sendMessage" class="flex flex-col gap-4" data-ai-chat-ui="composer">
+    <form wire:submit="sendMessage" class="flex flex-col gap-4" data-ai-kit="composer">
         <textarea
             wire:model="message"
             rows="6"

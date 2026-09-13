@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('ai-chat-ui.tables.turns', 'agent_conversation_turns'), function (Blueprint $table) {
+        Schema::create(config('ai-kit.turns.tables.turns', 'agent_conversation_turns'), function (Blueprint $table) {
             $table->string('id', 36)->primary();
             $table->string('conversation_id', 36)->index();
             $table->string('participant_type')->nullable();
@@ -22,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists(config('ai-chat-ui.tables.turns', 'agent_conversation_turns'));
+        Schema::dropIfExists(config('ai-kit.turns.tables.turns', 'agent_conversation_turns'));
     }
 };

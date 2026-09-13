@@ -21,8 +21,8 @@ class ProcessChatMessage implements ShouldQueue
      */
     public function __construct(public ConversationTurn $turn, public string|Decisions $message, public string $agentClass)
     {
-        $this->onConnection(config('ai-chat-ui.queue.connection'));
-        $this->onQueue(config('ai-chat-ui.queue.name', 'default'));
+        $this->onConnection(config('ai-kit.chat.queue.connection'));
+        $this->onQueue(config('ai-kit.chat.queue.name', 'default'));
     }
 
     public function handle(): void
@@ -31,8 +31,8 @@ class ProcessChatMessage implements ShouldQueue
 
         $this->turn->update(['status' => ConversationTurnStatus::Processing]);
 
-        Context::add('ai-chat-ui.conversation_id', $this->turn->conversation_id);
-        Context::add('ai-chat-ui.turn_id', $this->turn->id);
+        Context::add('ai-kit.conversation_id', $this->turn->conversation_id);
+        Context::add('ai-kit.turn_id', $this->turn->id);
 
         try {
             $agent = app($this->agentClass);

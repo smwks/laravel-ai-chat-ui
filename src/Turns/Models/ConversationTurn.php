@@ -30,7 +30,7 @@ class ConversationTurn extends Model
 
     public function getTable(): string
     {
-        return config('ai-chat-ui.tables.turns', 'agent_conversation_turns');
+        return config('ai-kit.turns.tables.turns', 'agent_conversation_turns');
     }
 
     public function conversation(): BelongsTo

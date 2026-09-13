@@ -5,7 +5,7 @@ function renderJsonViewer(mixed $value): string
     // Blade's {{ }} escapes quotes to &quot; entities — correct for the browser,
     // but decoded here so assertions can read naturally as literal JSON text.
     return html_entity_decode(
-        view('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $value])->render()
+        view('ai-kit::components.chat.partials.json-viewer', ['value' => $value])->render()
     );
 }
 

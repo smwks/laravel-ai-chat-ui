@@ -24,8 +24,8 @@ it('does nothing when context has no conversation id', function () {
 it('captures llm.request and llm.response when context holds a conversation id', function () {
     EchoAgent::fake(['Echo: hello']);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-abc');
-    Context::add('ai-chat-ui.turn_id', 'turn-xyz');
+    Context::add('ai-kit.conversation_id', 'conv-abc');
+    Context::add('ai-kit.turn_id', 'turn-xyz');
 
     (new EchoAgent)->prompt('hello');
 
@@ -52,7 +52,7 @@ it('captures tool.invoked with sql queries made during the tool call', function 
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-tool');
+    Context::add('ai-kit.conversation_id', 'conv-tool');
 
     (new EchoToolAgent)->prompt('use the tool');
 
@@ -69,7 +69,7 @@ it('captures tool.invoking with a description-based status when the tool has no 
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-invoking');
+    Context::add('ai-kit.conversation_id', 'conv-invoking');
 
     (new EchoToolAgent)->prompt('use the tool');
 
@@ -87,7 +87,7 @@ it('captures tool.invoking with a custom status message when the tool implements
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-status');
+    Context::add('ai-kit.conversation_id', 'conv-status');
 
     (new EchoStatusToolAgent)->prompt('use the tool');
 
@@ -102,7 +102,7 @@ it('correlates tool.invoking and tool.invoked via the same tool_invocation_id', 
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-correlate');
+    Context::add('ai-kit.conversation_id', 'conv-correlate');
 
     (new EchoToolAgent)->prompt('use the tool');
 
@@ -113,8 +113,8 @@ it('correlates tool.invoking and tool.invoked via the same tool_invocation_id', 
 });
 
 it('captures tool.approval_requested with each pending call when context holds a conversation id', function () {
-    Context::add('ai-chat-ui.conversation_id', 'conv-approval');
-    Context::add('ai-chat-ui.turn_id', 'turn-approval');
+    Context::add('ai-kit.conversation_id', 'conv-approval');
+    Context::add('ai-kit.turn_id', 'turn-approval');
 
     Event::dispatch(new ToolApprovalRequested(
         'inv-1',
@@ -136,7 +136,7 @@ it('captures tool.approval_requested with each pending call when context holds a
 });
 
 it('captures tool.approval_resolved with the resolved results', function () {
-    Context::add('ai-chat-ui.conversation_id', 'conv-resolved');
+    Context::add('ai-kit.conversation_id', 'conv-resolved');
 
     Event::dispatch(new ToolApprovalResolved(
         'inv-1',

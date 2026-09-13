@@ -26,10 +26,10 @@ it('hides the heading when showHeader is false', function () {
     $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
     test()->actingAs($user);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->assertSee('Conversation history');
 
-    Livewire::test('ai-chat-ui::components.chat.history', ['showHeader' => false])
+    Livewire::test('ai-kit::components.chat.history', ['showHeader' => false])
         ->assertDontSee('Conversation history');
 });
 
@@ -45,12 +45,12 @@ it('uses a custom containerClass when given', function () {
     $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
     test()->actingAs($user);
 
-    Livewire::test('ai-chat-ui::components.chat.history', ['containerClass' => 'my-custom-wrapper'])
+    Livewire::test('ai-kit::components.chat.history', ['containerClass' => 'my-custom-wrapper'])
         ->assertSeeHtml('my-custom-wrapper')
         ->assertDontSeeHtml('w-full p-6');
 });
 
-it('exposes data-ai-chat-ui hooks for styling', function () {
+it('exposes data-ai-kit hooks for styling', function () {
     if (! Schema::hasTable('users')) {
         Schema::create('users', function ($table) {
             $table->id();
@@ -62,9 +62,9 @@ it('exposes data-ai-chat-ui hooks for styling', function () {
     $user = ChatHistoryComponentTestUser::create(['name' => 'Ada']);
     test()->actingAs($user);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
-        ->assertSeeHtml('data-ai-chat-ui="root"')
-        ->assertSeeHtml('data-ai-chat-ui="header"');
+    Livewire::test('ai-kit::components.chat.history')
+        ->assertSeeHtml('data-ai-kit="root"')
+        ->assertSeeHtml('data-ai-kit="header"');
 });
 
 it('lists conversations and computes token/model stats from llm events', function () {
@@ -98,7 +98,7 @@ it('lists conversations and computes token/model stats from llm events', functio
         'payload' => ['usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5]],
     ]);
 
-    $component = Livewire::test('ai-chat-ui::components.chat.history');
+    $component = Livewire::test('ai-kit::components.chat.history');
 
     $component->assertSee('Weather question');
 
@@ -132,7 +132,7 @@ it('filters conversations by search term', function () {
         'title' => 'Sports scores',
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->set('search', 'weather')
         ->assertSee('Weather question')
         ->assertDontSee('Sports scores');
@@ -164,7 +164,7 @@ it('only lists conversations belonging to the authenticated user', function () {
 
     test()->actingAs($owner);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->assertSee('Owner conversation')
         ->assertDontSee('Stranger conversation');
 });
@@ -188,12 +188,12 @@ it('denies statsFor for a conversation you do not own', function () {
 
     test()->actingAs($owner);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->call('statsFor', $strangerConversation->id)
         ->assertForbidden();
 });
 
-it('dispatches ai-chat-ui-conversation-selected when a conversation is selected', function () {
+it('dispatches ai-kit-conversation-selected when a conversation is selected', function () {
     Schema::create('users', function ($table) {
         $table->id();
         $table->string('name');
@@ -210,9 +210,9 @@ it('dispatches ai-chat-ui-conversation-selected when a conversation is selected'
         'title' => 'Weather question',
     ]);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->call('selectConversation', $conversation->id)
-        ->assertDispatched('ai-chat-ui-conversation-selected', conversationId: $conversation->id);
+        ->assertDispatched('ai-kit-conversation-selected', conversationId: $conversation->id);
 });
 
 it('denies selecting a conversation you do not own', function () {
@@ -234,7 +234,7 @@ it('denies selecting a conversation you do not own', function () {
 
     test()->actingAs($owner);
 
-    Livewire::test('ai-chat-ui::components.chat.history')
+    Livewire::test('ai-kit::components.chat.history')
         ->call('selectConversation', $strangerConversation->id)
         ->assertForbidden();
 });

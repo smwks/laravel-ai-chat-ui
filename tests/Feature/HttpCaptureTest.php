@@ -14,8 +14,8 @@ it('captures one http.exchange event only while context holds a conversation id'
 
     expect(ConversationEvent::count())->toBe(0);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-123');
-    Context::add('ai-chat-ui.turn_id', 'turn-456');
+    Context::add('ai-kit.conversation_id', 'conv-123');
+    Context::add('ai-kit.turn_id', 'turn-456');
 
     Http::withHeaders(['Authorization' => 'Bearer secret'])->get('https://example.com/with-context');
 
@@ -42,7 +42,7 @@ it('tags an http exchange made from inside a tool with that tool as its source',
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http');
+    Context::add('ai-kit.conversation_id', 'conv-tool-http');
 
     (new EchoHttpToolAgent)->prompt('use the tool');
 
@@ -59,7 +59,7 @@ it('tags a tool-sourced http exchange with the same tool_invocation_id as its to
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http-invocation-id');
+    Context::add('ai-kit.conversation_id', 'conv-tool-http-invocation-id');
 
     (new EchoHttpToolAgent)->prompt('use the tool');
 
@@ -78,7 +78,7 @@ it('does not leak a tool source onto an http exchange made after the tool call f
         'Done',
     ]);
 
-    Context::add('ai-chat-ui.conversation_id', 'conv-tool-http-cleanup');
+    Context::add('ai-kit.conversation_id', 'conv-tool-http-cleanup');
 
     (new EchoHttpToolAgent)->prompt('use the tool');
 

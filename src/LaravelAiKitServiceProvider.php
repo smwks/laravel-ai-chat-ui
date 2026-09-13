@@ -31,41 +31,41 @@ class LaravelAiKitServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/ai-chat-ui.php', 'ai-chat-ui');
+        $this->mergeConfigFrom(__DIR__.'/../config/ai-kit.php', 'ai-kit');
 
         $this->app->singleton(QueryTracker::class);
     }
 
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'ai-chat-ui');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'ai-kit');
 
-        // Register the "ai-chat-ui" namespace with Livewire's own component
+        // Register the "ai-kit" namespace with Livewire's own component
         // finder (separate from the Blade view namespace above) so that a
-        // consuming app's own <livewire:ai-chat-ui::components.chat.*> tags
+        // consuming app's own <livewire:ai-kit::components.chat.*> tags
         // (or a direct Route::livewire() call, if preferred) can resolve
         // these components. The package registers no routes of its own —
         // see the README's "Embedding these components" section.
-        Livewire::addNamespace('ai-chat-ui', __DIR__.'/../resources/views');
+        Livewire::addNamespace('ai-kit', __DIR__.'/../resources/views');
 
         $this->publishes([
-            __DIR__.'/../config/ai-chat-ui.php' => config_path('ai-chat-ui.php'),
-        ], 'ai-chat-ui-config');
+            __DIR__.'/../config/ai-kit.php' => config_path('ai-kit.php'),
+        ], 'ai-kit-config');
 
         $this->publishes([
             __DIR__.'/../database/migrations/2026_08_23_000001_create_agent_conversation_turns_table.php' => database_path('migrations/2026_08_23_000001_create_agent_conversation_turns_table.php'),
             __DIR__.'/../database/migrations/2026_08_23_000002_create_agent_conversation_events_table.php' => database_path('migrations/2026_08_23_000002_create_agent_conversation_events_table.php'),
-        ], 'ai-chat-ui-migrations');
+        ], 'ai-kit-migrations');
 
         $this->publishes([
-            __DIR__.'/../resources/js/json-viewer.min.js' => public_path('vendor/ai-chat-ui/json-viewer.min.js'),
-            __DIR__.'/../resources/js/json-tree-search.js' => public_path('vendor/ai-chat-ui/json-tree-search.js'),
-            __DIR__.'/../resources/css/reply-body.css' => public_path('vendor/ai-chat-ui/reply-body.css'),
-        ], 'ai-chat-ui-assets');
+            __DIR__.'/../resources/js/json-viewer.min.js' => public_path('vendor/ai-kit/json-viewer.min.js'),
+            __DIR__.'/../resources/js/json-tree-search.js' => public_path('vendor/ai-kit/json-tree-search.js'),
+            __DIR__.'/../resources/css/reply-body.css' => public_path('vendor/ai-kit/reply-body.css'),
+        ], 'ai-kit-chat-assets');
 
         $this->publishes([
-            __DIR__.'/../resources/views' => resource_path('views/vendor/ai-chat-ui'),
-        ], 'ai-chat-ui-views');
+            __DIR__.'/../resources/views' => resource_path('views/vendor/ai-kit'),
+        ], 'ai-kit-chat-views');
 
         $this->registerHttpCaptureMiddleware();
 
@@ -110,7 +110,7 @@ class LaravelAiKitServiceProvider extends ServiceProvider
         // handle()); a concurrent caller (e.g. Http::pool()) would need its own
         // correlation id instead of this shared Context key.
         Http::globalRequestMiddleware(function ($request) use ($sensitiveHeaders) {
-            if (! Context::has('ai-chat-ui.conversation_id')) {
+            if (! Context::has('ai-kit.conversation_id')) {
                 return $request;
             }
 
@@ -119,7 +119,7 @@ class LaravelAiKitServiceProvider extends ServiceProvider
                 array_flip($sensitiveHeaders)
             );
 
-            Context::add('ai-chat-ui.pending_http_request', [
+            Context::add('ai-kit.pending_http_request', [
                 'started_at' => hrtime(true),
                 'method' => $request->getMethod(),
                 'url' => (string) $request->getUri(),
@@ -131,11 +131,11 @@ class LaravelAiKitServiceProvider extends ServiceProvider
         });
 
         Http::globalResponseMiddleware(function ($response) use ($sensitiveHeaders) {
-            $pending = Context::get('ai-chat-ui.pending_http_request');
+            $pending = Context::get('ai-kit.pending_http_request');
 
-            Context::forget('ai-chat-ui.pending_http_request');
+            Context::forget('ai-kit.pending_http_request');
 
-            if (! Context::has('ai-chat-ui.conversation_id') || ! $pending) {
+            if (! Context::has('ai-kit.conversation_id') || ! $pending) {
                 return $response;
             }
 
@@ -145,12 +145,12 @@ class LaravelAiKitServiceProvider extends ServiceProvider
             );
 
             ConversationEvent::create([
-                'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
-                'turn_id' => Context::get('ai-chat-ui.turn_id'),
+                'conversation_id' => Context::get('ai-kit.conversation_id'),
+                'turn_id' => Context::get('ai-kit.turn_id'),
                 'event_type' => 'http.exchange',
                 'payload' => [
-                    'source' => Context::get('ai-chat-ui.tool_source', 'provider'),
-                    'tool_invocation_id' => Context::get('ai-chat-ui.tool_invocation_id'),
+                    'source' => Context::get('ai-kit.tool_source', 'provider'),
+                    'tool_invocation_id' => Context::get('ai-kit.tool_invocation_id'),
                     'method' => $pending['method'],
                     'url' => $pending['url'],
                     'status' => $response->getStatusCode(),

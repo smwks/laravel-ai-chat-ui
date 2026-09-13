@@ -57,7 +57,7 @@ class QueryTracker
      */
     protected function isOwnLoggingQuery(string $sql): bool
     {
-        foreach ([config('ai-chat-ui.tables.events'), config('ai-chat-ui.tables.turns')] as $table) {
+        foreach ([config('ai-kit.turns.tables.events'), config('ai-kit.turns.tables.turns')] as $table) {
             if ($table && str_contains($sql, $table)) {
                 return true;
             }

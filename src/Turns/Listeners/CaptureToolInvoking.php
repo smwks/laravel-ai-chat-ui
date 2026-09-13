@@ -21,10 +21,10 @@ class CaptureToolInvoking
         // attributed to this tool rather than mistaken for a provider call, and
         // grouped under the correct call if the same tool runs more than once
         // in one turn.
-        Context::add('ai-chat-ui.tool_source', class_basename($event->tool));
-        Context::add('ai-chat-ui.tool_invocation_id', $event->toolInvocationId);
+        Context::add('ai-kit.tool_source', class_basename($event->tool));
+        Context::add('ai-kit.tool_invocation_id', $event->toolInvocationId);
 
-        if (! Context::has('ai-chat-ui.conversation_id')) {
+        if (! Context::has('ai-kit.conversation_id')) {
             return;
         }
 
@@ -33,8 +33,8 @@ class CaptureToolInvoking
             : (string) $event->tool->description();
 
         ConversationEvent::create([
-            'conversation_id' => Context::get('ai-chat-ui.conversation_id'),
-            'turn_id' => Context::get('ai-chat-ui.turn_id'),
+            'conversation_id' => Context::get('ai-kit.conversation_id'),
+            'turn_id' => Context::get('ai-kit.turn_id'),
             'event_type' => 'tool.invoking',
             'payload' => [
                 'tool' => class_basename($event->tool),

@@ -13,17 +13,17 @@ it('resolves a {conversation} route segment by key instead of every column', fun
         'title' => 'Route binding test',
     ]);
 
-    Route::get('/ai-chat-ui-test/{conversation}', fn (Conversation $conversation) => $conversation->id)
+    Route::get('/ai-kit-test/{conversation}', fn (Conversation $conversation) => $conversation->id)
         ->middleware(SubstituteBindings::class);
 
-    $this->get('/ai-chat-ui-test/'.$conversation->id)
+    $this->get('/ai-kit-test/'.$conversation->id)
         ->assertOk()
         ->assertSeeText($conversation->id);
 });
 
 it('404s for a {conversation} segment that does not match any conversation', function () {
-    Route::get('/ai-chat-ui-test/{conversation}', fn (Conversation $conversation) => $conversation->id)
+    Route::get('/ai-kit-test/{conversation}', fn (Conversation $conversation) => $conversation->id)
         ->middleware(SubstituteBindings::class);
 
-    $this->get('/ai-chat-ui-test/does-not-exist')->assertNotFound();
+    $this->get('/ai-kit-test/does-not-exist')->assertNotFound();
 });

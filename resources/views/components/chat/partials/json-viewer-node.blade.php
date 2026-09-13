@@ -23,7 +23,7 @@
         @if ($count > 0)
             <div x-show="open" x-cloak>
                 @foreach ($entries as $k => $v)
-                    @include('ai-chat-ui::components.chat.partials.json-viewer-node', [
+                    @include('ai-kit::components.chat.partials.json-viewer-node', [
                         'value' => $v,
                         'depth' => $depth + 1,
                         'keyName' => $isList ? null : $k,

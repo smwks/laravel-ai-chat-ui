@@ -6,7 +6,7 @@
 @endphp
 
 <div x-data="{ side: 'request' }" class="space-y-4 p-1">
-    @include('ai-chat-ui::components.chat.partials.thought-details._header', ['title' => 'HTTP Exchange', 'event' => $event, 'showIds' => $showIds])
+    @include('ai-kit::components.chat.partials.thought-details._header', ['title' => 'HTTP Exchange', 'event' => $event, 'showIds' => $showIds])
 
     <div class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 text-sm">
         <span class="text-zinc-400">Method</span>
@@ -25,18 +25,18 @@
     <div x-show="side === 'request'" class="space-y-4">
         <div>
             <div class="mb-1 text-sm text-zinc-400">Body</div>
-            @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload['request']['body'] ?? null])
+            @include('ai-kit::components.chat.partials.json-viewer', ['value' => $event->payload['request']['body'] ?? null])
         </div>
 
-        @include('ai-chat-ui::components.chat.partials.thought-details._headers-table', ['headers' => $event->payload['request']['headers'] ?? []])
+        @include('ai-kit::components.chat.partials.thought-details._headers-table', ['headers' => $event->payload['request']['headers'] ?? []])
     </div>
 
     <div x-show="side === 'response'" class="space-y-4">
         <div>
             <div class="mb-1 text-sm text-zinc-400">Body</div>
-            @include('ai-chat-ui::components.chat.partials.json-viewer', ['value' => $event->payload['response']['body'] ?? null])
+            @include('ai-kit::components.chat.partials.json-viewer', ['value' => $event->payload['response']['body'] ?? null])
         </div>
 
-        @include('ai-chat-ui::components.chat.partials.thought-details._headers-table', ['headers' => $event->payload['response']['headers'] ?? []])
+        @include('ai-kit::components.chat.partials.thought-details._headers-table', ['headers' => $event->payload['response']['headers'] ?? []])
     </div>
 </div>
