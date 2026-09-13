@@ -21,6 +21,7 @@ use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
 use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
 use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
 use Smwks\LaravelAiKit\Testbench\ApprovalToolAgent;
+use Smwks\LaravelAiKit\Testbench\EchoAgent;
 
 class ToolApprovalTestUser extends Authenticatable
 {
@@ -174,7 +175,7 @@ it('renders an approve/reject prompt for a paused turn', function () {
         'reason' => 'This changes a meeting record.',
     ]]);
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->assertSee('UpdateMeetingTool')
         ->assertSee('This changes a meeting record.')
         ->assertSee('meeting_at')
@@ -193,7 +194,7 @@ it('approving a call settles the paused turn and dispatches a resume with the de
 
     Bus::fake();
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->call('approvePendingCall', 'call_1');
 
     Bus::assertDispatched(ProcessChatMessage::class, function (ProcessChatMessage $job) {
@@ -215,7 +216,7 @@ it('rejecting every pending call dispatches a resume rejecting them', function (
 
     Bus::fake();
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->assertSee('Reject all')
         ->call('rejectAllPending');
 
@@ -236,7 +237,7 @@ it('does not resolve until every pending call has a decision', function () {
 
     Bus::fake();
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->call('approvePendingCall', 'call_1');
 
     Bus::assertNotDispatched(ProcessChatMessage::class);
@@ -268,7 +269,7 @@ it('hides the prompt once the pending calls have been resolved on a later row', 
         'updated_at' => $assistant->created_at->copy()->addSecond(),
     ]);
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->assertDontSeeHtml('data-ai-kit="approval-request"')
         ->assertSee('Done.');
 });
@@ -282,7 +283,7 @@ it('blocks sending a new message while a turn awaits approval', function () {
 
     Bus::fake();
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->set('message', 'meanwhile...')
         ->call('sendMessage');
 
@@ -300,7 +301,7 @@ it('denies resolving an approval on a conversation the user cannot send to', fun
 
     Bus::fake();
 
-    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation])
+    Livewire::test('ai-kit::components.chat.conversation', ['conversation' => $conversation, 'agent' => EchoAgent::class])
         ->call('approvePendingCall', 'call_1')
         ->assertForbidden();
 

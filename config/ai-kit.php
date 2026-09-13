@@ -1,7 +1,5 @@
 <?php
 
-use Smwks\LaravelAiKit\Testbench\EchoAgent;
-
 return [
 
     'turns' => [
@@ -12,8 +10,6 @@ return [
     ],
 
     'chat' => [
-        'agent' => EchoAgent::class,
-
         /*
         |----------------------------------------------------------------
         | Tool detail views

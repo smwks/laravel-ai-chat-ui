@@ -18,12 +18,11 @@ new class extends Component {
     public Conversation $conversation;
 
     /**
-     * Agent class to use for this conversation, e.g. App\Ai\Agents\SupportAgent::class.
-     * Falls back to config('ai-kit.chat.agent') when not given — pass this explicitly
-     * when a site embeds more than one bot, so each host page pins its own agent
-     * rather than sharing the single globally-configured one.
+     * Agent class (or container binding key) to use for this conversation, e.g.
+     * App\Ai\Agents\SupportAgent::class. Required — this package has no app-wide
+     * default agent, so every embed of this component names its own.
      */
-    public ?string $agent = null;
+    public string $agent;
 
     /**
      * Whether the "show thoughts" trace inspector is available at all. This is
@@ -161,7 +160,7 @@ new class extends Component {
 
     protected function resolvedAgentClass(): string
     {
-        return $this->agent ?? config('ai-kit.chat.agent');
+        return $this->agent;
     }
 
     /**
