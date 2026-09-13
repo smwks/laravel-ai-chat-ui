@@ -78,7 +78,7 @@ it('marks the turn failed and rethrows when the agent throws', function () {
     expect($turn->status)->toBe(ConversationTurnStatus::Failed);
 });
 
-it('prompts the given agentClass rather than the config-default agent', function () {
+it('prompts the given agentClass rather than any other registered agent', function () {
     [$conversation, $turn] = makeTurnFixture();
 
     EchoAgent::fake(['should never be used']);

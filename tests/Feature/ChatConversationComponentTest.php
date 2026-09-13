@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
-use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
 use Smwks\LaravelAiKit\Chat\Jobs\ProcessChatMessage;
-use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
-use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
 use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
 use Smwks\LaravelAiKit\Testbench\EchoAgent;
 use Smwks\LaravelAiKit\Testbench\EchoToolAgent;
+use Smwks\LaravelAiKit\Turns\Enums\ConversationTurnStatus;
+use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
+use Smwks\LaravelAiKit\Turns\Models\ConversationTurn;
 
 class ChatConversationComponentTestUser extends Authenticatable
 {
@@ -116,7 +116,7 @@ it('dispatches the job with the given agent prop', function () {
     Bus::fake();
 
     Livewire::test('ai-kit::components.chat.conversation', [
-        'conversation' => $conversation, 'agent' => EchoAgent::class,
+        'conversation' => $conversation,
         'agent' => EchoToolAgent::class,
         'initialMessage' => 'Hello there',
     ]);

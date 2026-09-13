@@ -143,8 +143,10 @@ consistently pair a conversation with its agent.
 ## Conventions
 
 - `src/Testbench/` holds runnable sample agents/tools (`EchoAgent`, `ApprovalTool`, `HttpCallingTool`,
-  `StatusMessageTool`, …) — they are both the zero-config defaults *and* the test fixtures. Keep them working.
-- Extension without forking: implement `Contracts\HasStatusMessage` for a custom "thinking" string;
+  `StatusMessageTool`, …) — they are the bundled sample agents (point the required `agent` prop at
+  `EchoAgent` to smoke-test an install with no host-app agent code) *and* the test fixtures. Keep
+  them working.
+- Extension without forking: implement `Turns\Contracts\HasStatusMessage` for a custom "thinking" string;
   use `tool_views` config for a custom detail panel; publish views (`--tag=ai-kit-chat-views`) only to
   override the generic partials.
 - Every structural element in the Blade carries a `data-ai-kit="<role>"` hook — preserve these

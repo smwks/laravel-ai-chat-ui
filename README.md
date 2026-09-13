@@ -70,8 +70,6 @@ php artisan vendor:publish --provider="Laravel\Ai\AiServiceProvider"
 php artisan migrate
 ```
 
-Run `php artisan ai-kit:install` at any time to check this prerequisite is satisfied.
-
 ## Installation
 
 ```bash
@@ -81,6 +79,9 @@ php artisan vendor:publish --tag=ai-kit-migrations
 php artisan vendor:publish --tag=ai-kit-chat-assets
 php artisan migrate
 ```
+
+Run `php artisan ai-kit:install` at any time to verify both `laravel/ai`'s own tables and
+this package's turns/events tables exist.
 
 There is no app-wide default agent — every embed of `chat.conversation` passes its own
 `agent` prop. `Smwks\LaravelAiKit\Testbench\EchoAgent` — a trivial agent with no tools — is
@@ -481,7 +482,7 @@ identity:
 
 ## Extension points
 
-- Override `Smwks\LaravelAiKit\Policies\ConversationPolicy::viewThoughts()` (or swap
+- Override `Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy::viewThoughts()` (or swap
   in your own policy via `Gate::policy(Conversation::class, ...)`) to restrict who can
   see the "show thoughts" trace inspector — it defaults to the same rule as `view()`.
   This is checked in addition to, not instead of, the `showThoughts` component prop.
@@ -504,10 +505,10 @@ identity:
   rendering through the package's own generic tool partial — no need to publish or fork
   anything just to add one tool's view.
 - Give a tool its own "thinking" status message by implementing
-  `Smwks\LaravelAiKit\Contracts\HasStatusMessage`:
+  `Smwks\LaravelAiKit\Turns\Contracts\HasStatusMessage`:
 
   ```php
-  use Smwks\LaravelAiKit\Contracts\HasStatusMessage;
+  use Smwks\LaravelAiKit\Turns\Contracts\HasStatusMessage;
 
   class WeatherTool implements Tool, HasStatusMessage
   {

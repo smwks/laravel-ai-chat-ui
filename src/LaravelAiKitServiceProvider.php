@@ -16,6 +16,7 @@ use Laravel\Ai\Events\ToolApprovalResolved;
 use Laravel\Ai\Events\ToolInvoked;
 use Laravel\Ai\Models\Conversation;
 use Livewire\Livewire;
+use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
 use Smwks\LaravelAiKit\Console\Commands\InstallCommand;
 use Smwks\LaravelAiKit\Turns\Listeners\CaptureAgentRequest;
 use Smwks\LaravelAiKit\Turns\Listeners\CaptureAgentResponse;
@@ -24,7 +25,6 @@ use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolApprovalResolved;
 use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolInvoked;
 use Smwks\LaravelAiKit\Turns\Listeners\CaptureToolInvoking;
 use Smwks\LaravelAiKit\Turns\Models\ConversationEvent;
-use Smwks\LaravelAiKit\Chat\Policies\ConversationPolicy;
 use Smwks\LaravelAiKit\Turns\Services\QueryTracker;
 
 class LaravelAiKitServiceProvider extends ServiceProvider
