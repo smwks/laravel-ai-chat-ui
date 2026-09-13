@@ -1,24 +1,32 @@
-# Laravel AI Chat UI
+# Laravel AI Kit
 
-*`smwks/laravel-ai-chat-ui`*
+*`smwks/laravel-ai-kit`*
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![PHP](https://img.shields.io/badge/php-%5E8.3-777bb4.svg)
 ![Laravel](https://img.shields.io/badge/laravel-12%20%7C%2013-ff2d20.svg)
-[![Tests](https://github.com/smwks/laravel-ai-chat-ui/actions/workflows/tests.yml/badge.svg)](https://github.com/smwks/laravel-ai-chat-ui/actions/workflows/tests.yml)
+[![Tests](https://github.com/smwks/laravel-ai-kit/actions/workflows/tests.yml/badge.svg)](https://github.com/smwks/laravel-ai-kit/actions/workflows/tests.yml)
 
-A drop-in Livewire chat UI and trace inspector for [`laravel/ai`](https://github.com/laravel/ai)
-agents. Give your users a real conversation UI — messages run in a queued job and their status
-survives a page reload, not just a live stream — and give yourself a "show thoughts" panel that
-replays every LLM request/response, tool invocation, and raw HTTP exchange behind each reply —
-without building any of it yourself.
+A component kit for building on [`laravel/ai`](https://github.com/laravel/ai): a turn/event
+data model that gives an agent run durable status and a full execution trace, and a Livewire
+chat UI built on top of it. Give your users a real conversation UI — messages run in a queued
+job and their status survives a page reload, not just a live stream — and give yourself a
+"show thoughts" panel that replays every LLM request/response, tool invocation, and raw HTTP
+exchange behind each reply — without building any of it yourself.
 
-It ships as three plain, presentation-only Livewire components with no opinion on your routes or
-page chrome. Drop them into pages your own app already owns — or straight into a
-[Filament](https://filamentphp.com) panel page. Same components, either way.
+The chat UI ships as three plain, presentation-only Livewire components with no opinion on
+your routes or page chrome. Drop them into pages your own app already owns — or straight into
+a [Filament](https://filamentphp.com) panel page. Same components, either way. Requiring the
+package is all it takes for the turn/event data model to be active; the chat UI additionally
+needs your own route pointing at a page that embeds its components — there are no feature
+flags to flip either way.
 
 ## Features
 
+- **A turn/event data model** — durable per-message status (`Pending → Processing → Complete
+  | Failed | AwaitingApproval`) and a full trace log (LLM requests/responses, tool calls, raw
+  HTTP exchanges), always active once the package is installed and migrated. See "Why this
+  package needs its own tables".
 - **A real conversation UI** — new-conversation form, searchable/paginated history, and a
   threaded view, all wired to `laravel/ai`'s own conversation persistence.
 - **A full trace inspector** — every LLM request/response, tool call, and raw HTTP exchange
@@ -26,8 +34,9 @@ page chrome. Drop them into pages your own app already owns — or straight into
   interleaved chronologically above it) and collapsible per-message.
 - **A built-in JSON tree viewer** — no external JS dependency; click-to-collapse, and a search
   box that highlights matches and auto-expands their ancestors.
-- **Multi-agent / multi-bot support** — run one agent app-wide via config, or pass a different
-  agent per conversation for a site running several distinct bots.
+- **Multi-agent / multi-bot support** — every embed of `chat.conversation` names its own agent
+  via a required `agent` prop, so a site running several distinct bots just points each page at
+  a different one.
 - **Policy-gated by default** — the trace inspector is guarded by a `viewThoughts` ability you
   can override, in addition to a component-level `showThoughts` prop.
 - **Human tool approval** — a tool that requires approval pauses the run and renders an
@@ -36,7 +45,7 @@ page chrome. Drop them into pages your own app already owns — or straight into
 - **Extensible** — give any tool its own detail view or "thinking…" status message without
   forking or publishing anything.
 - **Themeable without forking views** — every structural element carries a stable
-  `data-ai-chat-ui="<role>"` hook, and a component's own heading/width/padding can be
+  `data-ai-kit="<role>"` hook, and a component's own heading/width/padding can be
   turned off entirely for a host page that provides its own.
 - **Works in plain Livewire pages and in Filament panels** — see "Quick usage" below.
 
@@ -61,22 +70,23 @@ php artisan vendor:publish --provider="Laravel\Ai\AiServiceProvider"
 php artisan migrate
 ```
 
-Run `php artisan ai-chat-ui:install` at any time to check this prerequisite is satisfied.
+Run `php artisan ai-kit:install` at any time to check this prerequisite is satisfied.
 
 ## Installation
 
 ```bash
-composer require smwks/laravel-ai-chat-ui
-php artisan vendor:publish --tag=ai-chat-ui-config
-php artisan vendor:publish --tag=ai-chat-ui-migrations
-php artisan vendor:publish --tag=ai-chat-ui-assets
+composer require smwks/laravel-ai-kit
+php artisan vendor:publish --tag=ai-kit-config
+php artisan vendor:publish --tag=ai-kit-migrations
+php artisan vendor:publish --tag=ai-kit-chat-assets
 php artisan migrate
 ```
 
-Out of the box, the package uses `Smwks\LaravelAiChatUi\Testbench\EchoAgent` — a trivial
-agent with no tools — so the install is runnable without any host-app agent code, as long
-as `laravel/ai`'s own provider/API key is configured. See "Using your own agent" to swap
-in your own.
+There is no app-wide default agent — every embed of `chat.conversation` passes its own
+`agent` prop. `Smwks\LaravelAiKit\Testbench\EchoAgent` — a trivial agent with no tools — is
+bundled for exactly this: point `agent` at it to get the install running end-to-end before
+writing your own agent, as long as `laravel/ai`'s own provider/API key is configured. See
+"Using your own agent" to swap in your own.
 
 ## Quick usage
 
@@ -87,7 +97,7 @@ live. Two common hosts:
 
 ```blade
 {{-- resources/views/pages/chat/⚡conversation.blade.php --}}
-<livewire:ai-chat-ui::components.chat.conversation
+<livewire:ai-kit::components.chat.conversation
     :conversation="$conversation"
     :initial-message="$initialMessage"
 />
@@ -112,9 +122,9 @@ class Chat extends Page
 {{-- resources/views/filament/pages/chat.blade.php --}}
 <x-filament-panels::page>
     @if ($conversation)
-        <livewire:ai-chat-ui::components.chat.conversation :conversation="$conversation" />
+        <livewire:ai-kit::components.chat.conversation :conversation="$conversation" />
     @else
-        <livewire:ai-chat-ui::components.chat.new />
+        <livewire:ai-kit::components.chat.new />
     @endif
 </x-filament-panels::page>
 ```
@@ -127,12 +137,12 @@ events into full page navigation, and the full prop reference for `chat.conversa
 
 This package registers no routes and owns no URL structure or page-level navigation —
 that's entirely the consuming app's job. It ships three embeddable, presentation-only
-Livewire components under the `ai-chat-ui::components.chat` namespace:
+Livewire components under the `ai-kit::components.chat` namespace:
 
-- `ai-chat-ui::components.chat.new` — a form to start a new conversation.
-- `ai-chat-ui::components.chat.history` — a searchable, paginated list of the
+- `ai-kit::components.chat.new` — a form to start a new conversation.
+- `ai-kit::components.chat.history` — a searchable, paginated list of the
   authenticated user's conversations.
-- `ai-chat-ui::components.chat.conversation` — the thread + "show thoughts" trace
+- `ai-kit::components.chat.conversation` — the thread + "show thoughts" trace
   inspector for one conversation. Requires a `conversation` prop (a
   `Laravel\Ai\Models\Conversation` instance).
 
@@ -156,8 +166,9 @@ All three components accept:
 `chat.conversation` additionally accepts:
 
 - `initialMessage` (string) — auto-send a first message on mount.
-- `agent` (class name string) — use an agent other than `config('ai-chat-ui.agent')`
-  for this conversation; see "Using your own agent" for running more than one bot.
+- `agent` (string, **required**) — the agent class name (or container binding key) this
+  conversation runs; see "Using your own agent". There is no app-wide default, so every
+  embed of `chat.conversation` must pass one.
 - `showThoughts` (bool, default `true`) — whether the "show thoughts" trace
   inspector is available at all. This is ANDed with the `viewThoughts` policy
   ability below — both must allow it for a user to see it.
@@ -176,20 +187,20 @@ All three components accept:
 
 ### Styling hooks
 
-Every structural element carries a `data-ai-chat-ui="<role>"` attribute — `root`,
-`header`, `thread`, `message` (plus `data-ai-chat-ui-role="user"` / `"assistant"` on
+Every structural element carries a `data-ai-kit="<role>"` attribute — `root`,
+`header`, `thread`, `message` (plus `data-ai-kit-role="user"` / `"assistant"` on
 message bubbles), `reply-body`, `composer`, `thoughts-toggle`, `thought-event` — so you
 can theme any of it from your own stylesheet instead of forking views or writing
 brittle descendant selectors:
 
 ```css
-[data-ai-chat-ui="message"][data-ai-chat-ui-role="user"] {
+[data-ai-kit="message"][data-ai-kit-role="user"] {
     /* restyle the user's own message bubble */
 }
 ```
 
 `chat.conversation` also ships a small default stylesheet for `reply-body` (list
-markers, heading/paragraph spacing, code/pre) — published via `--tag=ai-chat-ui-assets`
+markers, heading/paragraph spacing, code/pre) — published via `--tag=ai-kit-chat-assets`
 alongside the JSON tree viewer's JS, so an assistant's Markdown reply still reads as
 structured text under a CSS reset like Filament's or Tailwind's Preflight. Override any
 of its rules from your own stylesheet, or skip loading it and publish your own.
@@ -202,8 +213,8 @@ like:
 
 | Event | Payload | Dispatched by |
 |---|---|---|
-| `ai-chat-ui-conversation-started` | `conversationId: string`, `message: string` | `components.chat.new`, after creating a new conversation |
-| `ai-chat-ui-conversation-selected` | `conversationId: string` | `components.chat.history`, when a row is picked |
+| `ai-kit-conversation-started` | `conversationId: string`, `message: string` | `components.chat.new`, after creating a new conversation |
+| `ai-kit-conversation-selected` | `conversationId: string` | `components.chat.history`, when a row is picked |
 
 Your own page-level Livewire component (or Filament page) listens for these (via
 Livewire's `#[On(...)]` attribute) and decides where to go. On a plain route, that
@@ -215,7 +226,7 @@ use Livewire\Component;
 
 new class extends Component
 {
-    #[On('ai-chat-ui-conversation-started')]
+    #[On('ai-kit-conversation-started')]
     public function onConversationStarted(string $conversationId, string $message): void
     {
         session()->flash('chat.initial_message', $message);
@@ -240,7 +251,7 @@ On a Filament page, there's no route to redirect to — the same event just swap
 component the page renders (see the Filament example under "Quick usage"):
 
 ```php
-#[On('ai-chat-ui-conversation-started')]
+#[On('ai-kit-conversation-started')]
 public function onConversationStarted(string $conversationId, string $message): void
 {
     $this->conversation = Conversation::findOrFail($conversationId);
@@ -295,7 +306,7 @@ class ChatConversation extends Page
 example above:
 
 ```php
-#[On('ai-chat-ui-conversation-started')]
+#[On('ai-kit-conversation-started')]
 public function onConversationStarted(string $conversationId, string $message): void
 {
     session()->flash('chat.initial_message', $message);
@@ -303,7 +314,7 @@ public function onConversationStarted(string $conversationId, string $message): 
     $this->redirect(ChatConversation::getUrl(['conversationId' => $conversationId]));
 }
 
-#[On('ai-chat-ui-conversation-selected')]
+#[On('ai-kit-conversation-selected')]
 public function onConversationSelected(string $conversationId): void
 {
     $this->redirect(ChatConversation::getUrl(['conversationId' => $conversationId]));
@@ -313,7 +324,7 @@ public function onConversationSelected(string $conversationId): void
 ```php
 // resources/views/filament/pages/chat-conversation.blade.php
 <x-filament-panels::page>
-    <livewire:ai-chat-ui::components.chat.conversation
+    <livewire:ai-kit::components.chat.conversation
         :conversation="$conversation"
         :initial-message="$initialMessage ?? session()->pull('chat.initial_message')"
         :show-header="false"
@@ -347,10 +358,10 @@ one — a known inconsistency, not yet swapped over.
 
 ## Using your own agent
 
-Set `config('ai-chat-ui.agent')` to your own agent's class name. It only needs to satisfy
-`laravel/ai`'s own `Agent` + `Conversational` interfaces, using the `Promptable` and
-`RemembersConversations` traits — nothing from this package is required on the agent
-itself:
+`chat.conversation`'s `agent` prop is required — there is no app-wide default. Point it at
+your own agent's class name; it only needs to satisfy `laravel/ai`'s own `Agent` +
+`Conversational` interfaces, using the `Promptable` and `RemembersConversations` traits —
+nothing from this package is required on the agent itself:
 
 ```php
 class SupportAgent implements Agent, Conversational
@@ -360,20 +371,21 @@ class SupportAgent implements Agent, Conversational
     public function instructions(): string { /* ... */ }
 }
 ```
-```php
-// config/ai-chat-ui.php
-'agent' => App\Ai\Agents\SupportAgent::class,
+
+```blade
+<livewire:ai-kit::components.chat.conversation
+    :conversation="$conversation"
+    :initial-message="$initialMessage"
+    agent="App\Ai\Agents\SupportAgent"
+/>
 ```
 
-### Running more than one bot
-
-`config('ai-chat-ui.agent')` is a single, app-wide default. For a site with several
-distinct bots, pass the `agent` prop to `components.chat.conversation` instead — it
-overrides the config default for that conversation:
+For a site running several distinct bots, just point each page's `chat.conversation` at a
+different agent:
 
 ```blade
 {{-- resources/views/pages/support/chat/⚡conversation.blade.php --}}
-<livewire:ai-chat-ui::components.chat.conversation
+<livewire:ai-kit::components.chat.conversation
     :conversation="$conversation"
     :initial-message="$initialMessage"
     agent="App\Ai\Agents\SupportAgent"
@@ -382,7 +394,7 @@ overrides the config default for that conversation:
 
 ```blade
 {{-- resources/views/pages/sales/chat/⚡conversation.blade.php --}}
-<livewire:ai-chat-ui::components.chat.conversation
+<livewire:ai-kit::components.chat.conversation
     :conversation="$conversation"
     :initial-message="$initialMessage"
     agent="App\Ai\Agents\SalesAgent"
@@ -392,10 +404,9 @@ overrides the config default for that conversation:
 This package doesn't persist which agent a conversation belongs to — neither of its own
 tables (see "Why this package needs its own tables") has a column for it. So resuming a
 conversation correctly depends on your own routing consistently pairing a conversation
-with the right agent, e.g. by
-giving each bot its own URL prefix (`/support/chat/{conversation}` vs
-`/sales/chat/{conversation}`) the way the two pages above illustrate, rather than one
-shared `chat.conversation` route used for every bot.
+with the right agent, e.g. by giving each bot its own URL prefix
+(`/support/chat/{conversation}` vs `/sales/chat/{conversation}`) the way the two pages
+above illustrate, rather than one shared `chat.conversation` route used for every bot.
 
 ### A `{conversation}` route segment and implicit binding
 
@@ -463,27 +474,29 @@ identity:
 
 | Key | Set by | Meaning |
 |---|---|---|
-| `ai-chat-ui.conversation_id` / `ai-chat-ui.turn_id` | `ProcessChatMessage::handle()`, once at the top | Which conversation/turn is in flight. Every capture listener below is a no-op unless `conversation_id` is present. |
-| `ai-chat-ui.tool_source` | `CaptureToolInvoking`, for the duration of that tool's `handle()` call | Attributes any HTTP call captured during that window to the tool rather than to the LLM provider — see `payload['source']` on an `http.exchange` event. |
-| `ai-chat-ui.tool_invocation_id` | `CaptureToolInvoking`, for the duration of that tool's `handle()` call | Correlates an `http.exchange` event back to the specific `tool.invoked` event it belongs to, so the UI can nest it under the right tool call even when the same tool runs more than once in a turn. |
-| `ai-chat-ui.pending_http_request` | The request-side HTTP middleware, cleared by the response-side middleware | Correlates a request with its response into one `http.exchange` event. Assumes calls through `Http::` happen one at a time; a concurrent caller (e.g. `Http::pool()`) would need its own correlation id instead. |
+| `ai-kit.conversation_id` / `ai-kit.turn_id` | `ProcessChatMessage::handle()`, once at the top | Which conversation/turn is in flight. Every capture listener below is a no-op unless `conversation_id` is present. |
+| `ai-kit.tool_source` | `CaptureToolInvoking`, for the duration of that tool's `handle()` call | Attributes any HTTP call captured during that window to the tool rather than to the LLM provider — see `payload['source']` on an `http.exchange` event. |
+| `ai-kit.tool_invocation_id` | `CaptureToolInvoking`, for the duration of that tool's `handle()` call | Correlates an `http.exchange` event back to the specific `tool.invoked` event it belongs to, so the UI can nest it under the right tool call even when the same tool runs more than once in a turn. |
+| `ai-kit.pending_http_request` | The request-side HTTP middleware, cleared by the response-side middleware | Correlates a request with its response into one `http.exchange` event. Assumes calls through `Http::` happen one at a time; a concurrent caller (e.g. `Http::pool()`) would need its own correlation id instead. |
 
 ## Extension points
 
-- Override `Smwks\LaravelAiChatUi\Policies\ConversationPolicy::viewThoughts()` (or swap
+- Override `Smwks\LaravelAiKit\Policies\ConversationPolicy::viewThoughts()` (or swap
   in your own policy via `Gate::policy(Conversation::class, ...)`) to restrict who can
   see the "show thoughts" trace inspector — it defaults to the same rule as `view()`.
   This is checked in addition to, not instead of, the `showThoughts` component prop.
-- Publish views (`--tag=ai-chat-ui-views`) and override
+- Publish views (`--tag=ai-kit-chat-views`) and override
   `components/chat/partials/thought-details/generic.blade.php` to render domain-specific
   structured-output payloads.
-- Give a specific tool its own "show thoughts" detail view via `config('ai-chat-ui.tool_views')`,
+- Give a specific tool its own "show thoughts" detail view via `config('ai-kit.chat.tool_views')`,
   keyed by the tool name found in a `tool.invoked` event's `payload['tool']`:
 
   ```php
-  // config/ai-chat-ui.php
-  'tool_views' => [
-      'weather' => 'chat.tools.weather-details',
+  // config/ai-kit.php
+  'chat' => [
+      'tool_views' => [
+          'weather' => 'chat.tools.weather-details',
+      ],
   ],
   ```
 
@@ -491,10 +504,10 @@ identity:
   rendering through the package's own generic tool partial — no need to publish or fork
   anything just to add one tool's view.
 - Give a tool its own "thinking" status message by implementing
-  `Smwks\LaravelAiChatUi\Contracts\HasStatusMessage`:
+  `Smwks\LaravelAiKit\Contracts\HasStatusMessage`:
 
   ```php
-  use Smwks\LaravelAiChatUi\Contracts\HasStatusMessage;
+  use Smwks\LaravelAiKit\Contracts\HasStatusMessage;
 
   class WeatherTool implements Tool, HasStatusMessage
   {
